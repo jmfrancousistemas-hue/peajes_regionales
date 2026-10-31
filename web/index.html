@@ -1,0 +1,604 @@
+<title>Simulador Híbrido de Peajes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Overpass:wght@400;600;800&family=Overpass+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: señal vial verde como cabecera; panel de mando a la izquierda, tramo + plaza + gráficas a la derecha. */
+:root {
+  --bg: #eceeea; --panel: #ffffff; --ink: #1b2320; --muted: #5a6560; --line: #d2d8d2;
+  --sign: #0d6a44; --sign-ink: #ffffff; --warn: #e3ad17; --stop: #c4352a; --ok: #2c8a52;
+  --asphalt: #3b4246; --mark: #f4f4ee; --shoulder: #c9cec7;
+  --auto: #2f6fb0; --bus: #e08a1e; --truck: #7b4fa2;
+  --display: "Overpass", "Highway Gothic", "Arial Narrow", sans-serif;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono: "Overpass Mono", ui-monospace, "Consolas", monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141917; --panel: #1d2421; --ink: #e5ebe7; --muted: #9aa69f; --line: #2e3833;
+  --sign: #157a50; --sign-ink: #ffffff; --warn: #f0c03a; --stop: #e5574a; --ok: #3fae6c;
+  --asphalt: #2b3135; --mark: #d9dcd4; --shoulder: #39413c;
+  --auto: #5d9ae0; --bus: #f0a040; --truck: #a67fd0; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #141917; --panel: #1d2421; --ink: #e5ebe7; --muted: #9aa69f; --line: #2e3833;
+  --sign: #157a50; --sign-ink: #ffffff; --warn: #f0c03a; --stop: #e5574a; --ok: #3fae6c;
+  --asphalt: #2b3135; --mark: #d9dcd4; --shoulder: #39413c;
+  --auto: #5d9ae0; --bus: #f0a040; --truck: #a67fd0; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px 40px; }
+.wrap { max-width: 1320px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+
+/* Cabecera tipo señal informativa */
+.senal { background: var(--sign); color: var(--sign-ink); border-radius: 10px; padding: 14px 20px;
+  border: 3px solid var(--sign); box-shadow: inset 0 0 0 2px var(--sign-ink); display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; }
+.senal h1 { font: 800 clamp(1.3rem, 3vw, 2rem)/1.1 var(--display); margin: 0; letter-spacing: .01em; text-wrap: balance; }
+.senal .sub { font: 600 .82rem/1.3 var(--display); text-transform: uppercase; letter-spacing: .08em; opacity: .9; }
+.senal .km { margin-left: auto; font: 600 .9rem var(--mono); border: 2px solid var(--sign-ink); border-radius: 6px; padding: 4px 10px; white-space: nowrap; }
+
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 2px solid var(--line); }
+.tabs button { font: 600 .92rem var(--display); background: none; border: 0; color: var(--muted); padding: 8px 14px;
+  border-bottom: 3px solid transparent; margin-bottom: -2px; cursor: pointer; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--warn); }
+.tabs button:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--warn); outline-offset: 2px; }
+
+.grid { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; min-width: 0; }
+.panel h2 { font: 800 .8rem var(--display); text-transform: uppercase; letter-spacing: .09em; color: var(--muted); margin: 0 0 10px; }
+.panel h3 { font: 600 1rem var(--display); margin: 14px 0 6px; }
+
+.ctrl { display: grid; grid-template-columns: 1fr 86px; gap: 6px 10px; align-items: center; }
+.ctrl label { font-size: .86rem; color: var(--ink); }
+.ctrl .grupo { grid-column: 1 / -1; font: 600 .74rem var(--display); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-top: 8px; border-top: 1px solid var(--line); padding-top: 8px; }
+.ctrl .grupo:first-child { margin-top: 0; border-top: 0; padding-top: 0; }
+input[type="number"] { width: 100%; font: 600 .9rem var(--mono); padding: 4px 6px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+input.cambiado { border-color: var(--warn); box-shadow: 0 0 0 1px var(--warn); }
+.chk { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; font-size: .86rem; }
+
+.botones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.btn { font: 600 .9rem var(--display); border-radius: 6px; padding: 8px 12px; cursor: pointer; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+.btn.primario { background: var(--sign); border-color: var(--sign); color: var(--sign-ink); }
+.btn:disabled { opacity: .5; cursor: default; }
+.vel { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: .84rem; color: var(--muted); }
+.vel input { flex: 1; min-width: 0; }
+.nota { font-size: .8rem; color: var(--muted); margin: 10px 0 0; }
+
+.lienzo { width: 100%; display: block; border-radius: 6px; }
+.leyenda { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .8rem; color: var(--muted); margin-top: 8px; }
+.leyenda i { display: inline-block; width: 18px; height: 8px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.kpi { border-left: 3px solid var(--line); padding: 2px 0 2px 10px; }
+.kpi b { display: block; font: 600 1.35rem/1.2 var(--mono); font-variant-numeric: tabular-nums; }
+.kpi span { font: 600 .72rem var(--display); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.kpi.alerta { border-left-color: var(--stop); }
+.kpi.bien { border-left-color: var(--ok); }
+
+.dos { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.tabla { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: .88rem; }
+th, td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: right; font-variant-numeric: tabular-nums; }
+th:first-child, td:first-child { text-align: left; }
+th { font: 600 .74rem var(--display); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+td.num { font-family: var(--mono); }
+.pill { display: inline-block; font: 600 .72rem var(--display); padding: 2px 8px; border-radius: 99px; letter-spacing: .04em; }
+.pill.si { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+.pill.no { background: color-mix(in srgb, var(--stop) 18%, transparent); color: var(--stop); }
+.texto { max-width: 68ch; }
+.texto p { margin: 6px 0; }
+pre.codigo { font: .84rem/1.45 var(--mono); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; overflow-x: auto; margin: 8px 0; white-space: pre; }
+[role="tabpanel"] { display: flex; flex-direction: column; gap: 16px; }
+[hidden] { display: none !important; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+  <header class="senal">
+    <div>
+      <div class="sub">Modelos de Simulación · UNINTEP · Alternativa 1</div>
+      <h1>Simulador Híbrido de Tráfico y Peajes</h1>
+    </div>
+    <div class="km" title="Longitud del tramo de aproximación">Taquilla a <span id="kmL">600</span> m</div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tab-sim" aria-selected="true" aria-controls="pan-sim">Simulación</button>
+    <button role="tab" id="tab-val" aria-selected="false" aria-controls="pan-val">Validación</button>
+    <button role="tab" id="tab-gen" aria-selected="false" aria-controls="pan-gen">Generador U(0,1)</button>
+    <button role="tab" id="tab-mat" aria-selected="false" aria-controls="pan-mat">MATLAB</button>
+  </nav>
+
+  <!-- ================= SIMULACIÓN ================= -->
+  <section role="tabpanel" id="pan-sim" aria-labelledby="tab-sim">
+    <div class="grid">
+      <aside class="panel">
+        <h2>Parámetros</h2>
+        <form id="form" class="ctrl" onsubmit="return false"></form>
+        <div class="botones">
+          <button class="btn primario" id="btnPlay" type="button">Iniciar</button>
+          <button class="btn" id="btnReset" type="button">Reiniciar</button>
+          <button class="btn" id="btnFull" type="button">Correr completa</button>
+        </div>
+        <div class="vel"><label for="vel">Velocidad</label><input type="range" id="vel" min="1" max="120" value="20"><span id="velTxt">×20</span></div>
+        <p class="nota">Un cambio de parámetro reinicia la corrida. Con la misma semilla y los mismos parámetros, MATLAB produce la misma secuencia aleatoria.</p>
+      </aside>
+
+      <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+        <div class="panel">
+          <h2 id="relojTxt">Tramo de aproximación · t = 0 s</h2>
+          <canvas id="cvTramo" class="lienzo" height="120"></canvas>
+          <h3>Plaza de peaje (acercamiento)</h3>
+          <canvas id="cvPlaza" class="lienzo" height="200"></canvas>
+          <div class="leyenda">
+            <span><i style="background:var(--auto)"></i>Auto (Cat. I)</span>
+            <span><i style="background:var(--bus)"></i>Bus (Cat. II)</span>
+            <span><i style="background:var(--truck)"></i>Camión (Cat. III)</span>
+            <span><i style="background:var(--ok)"></i>Taquilla libre</span>
+            <span><i style="background:var(--stop)"></i>Taquilla cobrando</span>
+          </div>
+        </div>
+        <div class="panel"><div class="kpis" id="kpis"></div></div>
+        <div class="dos">
+          <div class="panel"><h2>Vehículos en cola por carril (media móvil 60 s)</h2><canvas id="cvCola" class="lienzo" height="200"></canvas><div class="leyenda" id="leyCola"></div></div>
+          <div class="panel"><h2>Velocidad media de aproximación (km/h)</h2><canvas id="cvVel" class="lienzo" height="200"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= VALIDACIÓN ================= -->
+  <section role="tabpanel" id="pan-val" aria-labelledby="tab-val" hidden>
+    <div class="panel texto">
+      <h2>Cómo se valida el motor</h2>
+      <p>La utilización de cada taquilla debe estabilizarse en ρ = λ·E[S]/c sin importar la física. En modo discreto puro (sin IDM) la espera debe quedar entre M/G/c y M/M/c, porque cada carril tiene su propia fila.</p>
+      <p>En modo físico la taquilla queda bloqueada también mientras el siguiente vehículo avanza hasta ella. Por eso se compara con una M/G/c de servicio efectivo E[S] + t<sub>avance</sub>.</p>
+    </div>
+    <div class="panel">
+      <h2>Corrida actual frente a la teoría</h2>
+      <div class="tabla"><table id="tablaVal"><tbody><tr><td>Ejecute una corrida completa en la pestaña Simulación.</td></tr></tbody></table></div>
+    </div>
+    <div class="panel">
+      <h2>Réplicas independientes</h2>
+      <div class="botones" style="margin-top:0">
+        <label for="nRep" style="align-self:center;font-size:.86rem">Réplicas</label>
+        <input type="number" id="nRep" value="20" min="2" max="100" style="width:80px">
+        <button class="btn primario" id="btnRep" type="button">Correr réplicas</button>
+        <label class="chk" style="grid-column:auto"><input type="checkbox" id="repPuro"> Modo discreto puro</label>
+      </div>
+      <div class="tabla" style="margin-top:10px"><table id="tablaRep"><tbody><tr><td>Sin réplicas todavía. Cada réplica usa la semilla base + 7919·k.</td></tr></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- ================= GENERADOR ================= -->
+  <section role="tabpanel" id="pan-gen" aria-labelledby="tab-gen" hidden>
+    <div class="panel">
+      <h2>Generador congruencial Park–Miller</h2>
+      <p class="texto" style="margin:0 0 10px">X<sub>n+1</sub> = 16807·X<sub>n</sub> mod (2<sup>31</sup> − 1), U<sub>n</sub> = X<sub>n</sub>/m. Pruebas con α = 0,05.</p>
+      <div class="botones" style="margin-top:0">
+        <label for="gSem" style="align-self:center;font-size:.86rem">Semilla</label><input type="number" id="gSem" value="12345" style="width:120px">
+        <label for="gN" style="align-self:center;font-size:.86rem">n</label><input type="number" id="gN" value="10000" min="100" max="200000" style="width:110px">
+        <button class="btn primario" id="btnGen" type="button">Generar y probar</button>
+      </div>
+      <p class="nota" id="pmCheck"></p>
+    </div>
+    <div class="dos">
+      <div class="panel"><h2>Pruebas de aleatoriedad</h2><div class="tabla"><table id="tablaGen"></table></div></div>
+      <div class="panel"><h2>Primeros números</h2><pre class="codigo" id="primeros"></pre></div>
+    </div>
+    <div class="dos">
+      <div class="panel"><h2>Histograma (10 intervalos)</h2><canvas id="cvHist" class="lienzo" height="220"></canvas></div>
+      <div class="panel"><h2>Dispersión U<sub>i</sub> contra U<sub>i+1</sub></h2><canvas id="cvDisp" class="lienzo" height="220"></canvas></div>
+    </div>
+  </section>
+
+  <!-- ================= MATLAB ================= -->
+  <section role="tabpanel" id="pan-mat" aria-labelledby="tab-mat" hidden>
+    <div class="dos">
+      <div class="panel">
+        <h2>Llevar estos parámetros a MATLAB</h2>
+        <p class="nota" style="margin-top:0">Pegue este bloque en <code>defensa_en_caliente.m</code> o en la consola, después de <code>p = parametros_peaje();</code></p>
+        <pre class="codigo" id="codigoMat"></pre>
+        <button class="btn" id="btnCopiar" type="button">Copiar código</button> <span class="nota" id="copiado"></span>
+      </div>
+      <div class="panel">
+        <h2>Comparar con una corrida de MATLAB</h2>
+        <p class="nota" style="margin-top:0">En MATLAB ejecute <code>fase2_demo</code> o el botón Exportar JSON de la app. Luego cargue aquí <code>corrida_matlab.json</code>.</p>
+        <input type="file" id="archivoMat" accept=".json,application/json">
+        <div class="tabla" style="margin-top:10px"><table id="tablaMat"><tbody><tr><td>Sin archivo cargado.</td></tr></tbody></table></div>
+        <div class="botones"><button class="btn" id="btnAplicarMat" type="button" disabled>Usar los parámetros de MATLAB</button></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script src="motor.js"></script>
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  let PAL = {};   // colores del tema, se releen en cada cuadro (el tema puede cambiar)
+  const css = n => (n in PAL) ? PAL[n] : (PAL[n] = getComputedStyle(document.documentElement).getPropertyValue(n).trim());
+  const fmt = (x, d = 1) => (x === undefined || x === null || !isFinite(x)) ? '—' : Number(x).toLocaleString('es-CO', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+  // ---------------- Controles ----------------
+  const CAMPOS = [
+    ['Estocásticos (Rol B)'],
+    ['semilla', 'Semilla', 1, 2147483646, 1],
+    ['lambda', 'Llegadas λ (veh/h)', 10, 2000, 10],
+    ['propTag', 'Proporción con TAG', 0, 1, 0.05],
+    ['servManual', 'Cobro manual E[S] (s)', 1, 120, 1],
+    ['servTag', 'Cobro TAG E[S] (s)', 0.5, 30, 0.5],
+    ['Infraestructura'],
+    ['carrilesManuales', 'Taquillas manuales', 0, 8, 1],
+    ['carrilesTag', 'Taquillas TAG', 0, 4, 1],
+    ['L', 'Tramo de aproximación (m)', 150, 1500, 50],
+    ['Físicos IDM (Rol A)'],
+    ['factor_v0', 'Factor velocidad v0', 0.3, 2, 0.05],
+    ['factor_T', 'Factor brecha T', 0.3, 3, 0.05],
+    ['factor_a', 'Factor aceleración a', 0.3, 3, 0.05],
+    ['factor_b', 'Factor frenado b', 0.2, 4, 0.05],
+    ['Corrida'],
+    ['tFin', 'Duración (s)', 300, 14400, 300],
+  ];
+  const base = Peaje.parametrosPeaje();
+  const form = $('form');
+  for (const c of CAMPOS) {
+    if (c.length === 1) { const d = document.createElement('div'); d.className = 'grupo'; d.textContent = c[0]; form.appendChild(d); continue; }
+    const [k, et, mi, ma, st] = c;
+    const l = document.createElement('label'); l.htmlFor = 'p_' + k; l.textContent = et;
+    const i = document.createElement('input'); i.type = 'number'; i.id = 'p_' + k; i.min = mi; i.max = ma; i.step = st; i.value = base[k];
+    i.addEventListener('change', () => { i.classList.toggle('cambiado', Number(i.value) !== base[k]); reiniciar(); });
+    form.appendChild(l); form.appendChild(i);
+  }
+  const chk = document.createElement('label'); chk.className = 'chk';
+  chk.innerHTML = '<input type="checkbox" id="p_modoFisico" checked> Modo físico (IDM). Sin marcar: discreto puro';
+  form.appendChild(chk);
+  $('p_modoFisico').addEventListener('change', reiniciar);
+
+  function leerParametros() {
+    const p = Peaje.parametrosPeaje();
+    for (const c of CAMPOS) if (c.length > 1) {
+      let v = Number($('p_' + c[0]).value);
+      if (!isFinite(v)) v = base[c[0]];
+      v = Math.min(Math.max(v, c[2]), c[3]);
+      p[c[0]] = v;
+    }
+    p.carrilesManuales = Math.round(p.carrilesManuales); p.carrilesTag = Math.round(p.carrilesTag);
+    if (p.carrilesManuales + p.carrilesTag === 0) p.carrilesManuales = 1;
+    p.semilla = Math.round(p.semilla);
+    p.xSalida = p.L + 150;
+    p.modoFisico = $('p_modoFisico').checked;
+    return p;
+  }
+
+  // ---------------- Estado ----------------
+  let p, M, corriendo = false, tPrev = 0, ultimoR = null;
+  const nombreCarril = k => k < p.carrilesManuales ? 'M' + (k + 1) : 'TAG' + (k - p.carrilesManuales + 1);
+  const coloresCarril = () => { const b = [css('--auto'), css('--sign'), css('--bus'), css('--truck'), css('--stop'), css('--warn'), css('--muted')]; return k => b[k % b.length]; };
+  const colorCat = () => [css('--auto'), css('--bus'), css('--truck')];
+
+  function reiniciar() {
+    corriendo = false; $('btnPlay').textContent = 'Iniciar';
+    p = leerParametros(); M = new Peaje.Motor(p); ultimoR = null;
+    $('kmL').textContent = p.L;
+    actualizarCodigo(); dibujar(); kpis(); leyendaCola();
+  }
+
+  // ---------------- Lienzos ----------------
+  function prep(cv) {
+    const r = window.devicePixelRatio || 1, w = cv.clientWidth, h = Number(cv.getAttribute('height'));
+    if (cv.width !== Math.round(w * r) || cv.height !== Math.round(h * r)) { cv.width = Math.round(w * r); cv.height = Math.round(h * r); cv.style.height = h + 'px'; }
+    const g = cv.getContext('2d'); g.setTransform(r, 0, 0, r, 0, 0); g.clearRect(0, 0, w, h);
+    return [g, w, h];
+  }
+
+  function dibujarTramo() {
+    const cv = $('cvTramo'); const nC = M.nCarriles;
+    cv.setAttribute('height', String(Math.max(90, 36 + nC * 16)));
+    const [g, w, h] = prep(cv);
+    const izq = 46, der = 10, top = 18, alto = h - top - 20;
+    const sx = (w - izq - der) / p.xSalida, carrilH = alto / nC;
+    g.fillStyle = css('--asphalt'); g.fillRect(izq, top, w - izq - der, alto);
+    g.strokeStyle = css('--mark'); g.setLineDash([6, 8]); g.lineWidth = 1;
+    for (let k = 1; k < nC; k++) { g.beginPath(); g.moveTo(izq, top + k * carrilH); g.lineTo(izq + p.L * sx, top + k * carrilH); g.stroke(); }
+    g.setLineDash([]);
+    // taquillas
+    g.fillStyle = css('--mark'); g.fillRect(izq + p.L * sx - 1, top, 2, alto);
+    // escala en metros
+    g.fillStyle = css('--muted'); g.font = '600 10px ' + css('--mono'); g.textAlign = 'center';
+    for (let m = 0; m <= p.xSalida; m += (p.xSalida > 900 || w < 520 ? 200 : 100)) g.fillText(m + ' m', izq + m * sx, h - 5);
+    g.textAlign = 'right'; g.font = '600 10px ' + css('--display');
+    for (let k = 0; k < nC; k++) g.fillText(nombreCarril(k), izq - 6, top + (k + 0.5) * carrilH + 4);
+    const cc = colorCat();
+    for (const v of M.activos) {
+      g.fillStyle = cc[v.cat];
+      const x = izq + Math.max(v.x - v.largo, 0) * sx, ww = Math.max(v.largo * sx, 2.5);
+      g.fillRect(x, top + v.carril * carrilH + carrilH * 0.25, ww, carrilH * 0.5);
+    }
+    // vehículos represados en la entrada
+    const rep = new Array(nC).fill(0); for (const v of M.pendientes) rep[v.carril]++;
+    g.font = '600 10px ' + css('--mono'); g.textAlign = 'left'; g.fillStyle = css('--stop');
+    for (let k = 0; k < nC; k++) if (rep[k]) g.fillText('+' + rep[k], izq + 3, top + (k + 0.5) * carrilH - carrilH * 0.3);
+  }
+
+  function dibujarPlaza() {
+    const cv = $('cvPlaza'); const nC = M.nCarriles;
+    cv.setAttribute('height', String(Math.max(150, 30 + nC * 38)));
+    const [g, w, h] = prep(cv);
+    const x0 = p.L - 110, x1 = p.L + 40, izq = 46, der = 10, top = 8, alto = h - top - 22;
+    const sx = (w - izq - der) / (x1 - x0), carrilH = alto / nC, X = m => izq + (m - x0) * sx;
+    g.fillStyle = css('--asphalt'); g.fillRect(izq, top, w - izq - der, alto);
+    g.strokeStyle = css('--mark'); g.lineWidth = 1.5; g.setLineDash([10, 10]);
+    for (let k = 1; k < nC; k++) { g.beginPath(); g.moveTo(izq, top + k * carrilH); g.lineTo(X(p.L - 6), top + k * carrilH); g.stroke(); }
+    g.setLineDash([]);
+    g.fillStyle = css('--muted'); g.font = '600 10px ' + css('--mono'); g.textAlign = 'center';
+    const pm = w < 520 ? 40 : 20;
+    for (let m = Math.ceil(x0 / pm) * pm; m <= x1; m += pm) g.fillText(m + ' m', X(m), h - 6);
+    const cc = colorCat();
+    for (const v of M.activos) {
+      if (v.x < x0 - 1 || v.x - v.largo > x1) continue;
+      const xa = X(Math.max(v.x - v.largo, x0)), xb = X(Math.min(v.x, x1));
+      const y = top + v.carril * carrilH + carrilH * 0.22;
+      g.fillStyle = cc[v.cat]; g.fillRect(xa, y, Math.max(xb - xa, 1), carrilH * 0.56);
+      if (v.estado === 1 && v.acc < -0.3) { g.fillStyle = css('--stop'); g.fillRect(xa, y, 2, carrilH * 0.56); } // luces de freno
+    }
+    // casetas
+    for (let k = 0; k < nC; k++) {
+      const ocup = M.cab.ocupadaPor[k], y = top + k * carrilH + 3, hh = carrilH - 6;
+      g.fillStyle = ocup ? css('--stop') : css('--ok');
+      g.fillRect(X(p.L) + 2, y, 10, hh);
+      if (ocup) {
+        const frac = Math.min(Math.max((M.cab.tFin[k] - M.t) / ocup.servicio, 0), 1);
+        g.fillStyle = css('--warn'); g.fillRect(X(p.L) + 14, y + hh * (1 - frac), 4, hh * frac);
+      }
+      g.fillStyle = css('--mark'); g.font = '600 11px ' + css('--display'); g.textAlign = 'left';
+      g.fillText(nombreCarril(k) + (M.esTag[k] ? '' : ''), X(p.L) + 22, y + hh / 2 + 4);
+      g.fillStyle = css('--muted'); g.textAlign = 'right';
+      g.fillText(nombreCarril(k), izq - 6, top + (k + 0.5) * carrilH + 4);
+      g.fillStyle = css('--mark'); g.textAlign = 'left'; g.font = '600 10px ' + css('--mono');
+      g.fillText('cola ' + M.ultimaCola[k], izq + 4, y + 11);
+    }
+  }
+
+  function grafica(cv, series, colores, yMaxMin) {
+    const [g, w, h] = prep(cv);
+    const izq = 36, der = 10, top = 10, abajo = 24, W = w - izq - der, H = h - top - abajo;
+    const t = M.serie.t; const tMax = Math.max(p.tFin, 1);
+    let yMax = yMaxMin; for (const s of series) for (const y of s) if (y > yMax) yMax = y;
+    const paso = yMax <= 5 ? 1 : yMax <= 12 ? 2 : yMax <= 40 ? 10 : yMax <= 100 ? 20 : 50;
+    yMax = Math.ceil(yMax / paso) * paso;
+    g.strokeStyle = css('--line'); g.fillStyle = css('--muted'); g.font = '10px ' + css('--mono'); g.lineWidth = 1;
+    g.textAlign = 'right';
+    for (let y = 0; y <= yMax; y += paso) { const yy = top + H - y / yMax * H; g.beginPath(); g.moveTo(izq, yy); g.lineTo(izq + W, yy); g.stroke(); g.fillText(String(y), izq - 5, yy + 3); }
+    g.textAlign = 'center'; const pasoT = (tMax > 7200 ? 30 : tMax > 1800 ? 10 : 5) * (W < 360 ? 2 : 1);
+    for (let m = 0; m <= tMax / 60; m += pasoT) g.fillText(m + ' min', izq + m * 60 / tMax * W, h - 6);
+    series.forEach((s, i) => {
+      if (!s.length) return;
+      g.strokeStyle = colores(i); g.lineWidth = 1.5; g.beginPath();
+      for (let j = 0; j < s.length; j++) { const x = izq + t[j] / tMax * W, y = top + H - s[j] / yMax * H; j ? g.lineTo(x, y) : g.moveTo(x, y); }
+      g.stroke();
+      const j = s.length - 1; g.fillStyle = colores(i); g.beginPath(); g.arc(izq + t[j] / tMax * W, top + H - s[j] / yMax * H, 2.5, 0, 7); g.fill();
+    });
+  }
+
+  function leyendaCola() {
+    const col = coloresCarril(); let s = '';
+    for (let k = 0; k < M.nCarriles; k++) s += `<span><i style="background:${col(k)}"></i>${nombreCarril(k)}</span>`;
+    $('leyCola').innerHTML = s;
+  }
+
+  function dibujar() {
+    PAL = {};
+    $('relojTxt').textContent = `Tramo de aproximación · t = ${fmt(M.t, 0)} s de ${fmt(p.tFin, 0)} s`;
+    dibujarTramo(); dibujarPlaza();
+    const nC = M.nCarriles, series = [];
+    // media móvil de 60 s para que la tendencia se lea mejor
+    const movil = (a, v = 60) => { const r = []; let s = 0; for (let i = 0; i < a.length; i++) { s += a[i]; if (i >= v) s -= a[i - v]; r.push(s / Math.min(i + 1, v)); } return r; };
+    for (let k = 0; k < nC; k++) series.push(movil(M.serie.cola.map(c => c[k])));
+    grafica($('cvCola'), series, coloresCarril(), 1);
+    grafica($('cvVel'), [M.serie.velMedia], () => css('--sign'), 20);
+  }
+
+  function kpis() {
+    const t = Math.max(M.t, 1e-9);
+    const rho = M.cab.tOcupada.map(x => x / t);
+    const rhoMan = rho.filter((_, k) => !M.esTag[k]); const rM = rhoMan.length ? rhoMan.reduce((a, b) => a + b, 0) / rhoMan.length : NaN;
+    const colaTot = M.ultimaCola.reduce((a, b) => a + b, 0);
+    const atendidos = M.cab.atendidos.reduce((a, b) => a + b, 0);
+    const item = (v, et, cls = '') => `<div class="kpi ${cls}"><b>${v}</b><span>${et}</span></div>`;
+    $('kpis').innerHTML =
+      item(fmt(M.V.length, 0), 'Vehículos generados') +
+      item(fmt(atendidos, 0), 'Pagaron y salieron') +
+      item(fmt(colaTot, 0), 'En cola ahora', colaTot > 3 * M.nCarriles ? 'alerta' : '') +
+      item(fmt(M.pendientes.length, 0), 'Represados en entrada', M.pendientes.length ? 'alerta' : '') +
+      item(fmt(rM, 3), 'Utilización manual ρ', rM > 0.85 ? 'alerta' : 'bien') +
+      item('$' + fmt(M.recaudo / 1e6, 2) + ' M', 'Recaudo (COP)');
+  }
+
+  // ---------------- Bucle de animación ----------------
+  function cuadro(ts) {
+    if (corriendo) {
+      const dtReal = Math.min(0.1, (ts - tPrev) / 1000 || 0.016);
+      const pasos = Math.max(1, Math.round(Number($('vel').value) * dtReal / p.dt));
+      for (let i = 0; i < pasos && !M.terminado; i++) M.paso();
+      dibujar(); kpis();
+      if (M.terminado) terminar();
+    }
+    tPrev = ts; requestAnimationFrame(cuadro);
+  }
+  function terminar() { corriendo = false; $('btnPlay').textContent = 'Iniciar'; ultimoR = M.resultados(); tablaValidacion(ultimoR); }
+
+  $('btnPlay').addEventListener('click', () => {
+    if (M.terminado) reiniciar();
+    corriendo = !corriendo; $('btnPlay').textContent = corriendo ? 'Pausar' : 'Continuar';
+  });
+  $('btnReset').addEventListener('click', reiniciar);
+  $('btnFull').addEventListener('click', () => { while (!M.terminado) M.paso(); dibujar(); kpis(); terminar(); });
+  $('vel').addEventListener('input', () => { $('velTxt').textContent = '×' + $('vel').value; });
+
+  // ---------------- Validación ----------------
+  function filasGrupo(nombre, G) {
+    if (!G || !G.c || !G.teoria) return '';
+    const T = G.teoria, C = G.teoriaCorregida;
+    return `<tr><th colspan="5" style="text-align:left;padding-top:12px">${nombre} · c = ${G.c} · ${G.n} vehículos</th></tr>
+      <tr><td>Utilización ρ</td><td class="num">${fmt(G.rho_sim, 3)}</td><td class="num">${fmt(T.rho, 3)}</td><td class="num">${fmt(C.rho, 3)}</td><td>${pill(Math.abs(G.rho_sim - T.rho) < 0.05)}</td></tr>
+      <tr><td>Espera Wq (s)</td><td class="num">${fmt(G.Wq_sim)}</td><td class="num">${fmt(T.Wq)}</td><td class="num">${fmt(C.Wq)}</td><td></td></tr>
+      <tr><td>Cola media Lq (veh)</td><td class="num">${fmt(G.Lq_sim, 2)}</td><td class="num">${fmt(T.Lq, 2)}</td><td class="num">${fmt(C.Lq, 2)}</td><td></td></tr>
+      <tr><td>Servicio medio E[S] (s)</td><td class="num">${fmt(G.ES_sim)}</td><td class="num">${fmt(T.ES)}</td><td class="num">${fmt(C.ES)}</td><td></td></tr>`;
+  }
+  const pill = (ok, si = 'coincide', no = 'revisar') => `<span class="pill ${ok ? 'si' : 'no'}">${ok ? si : no}</span>`;
+  function tablaValidacion(R) {
+    $('tablaVal').innerHTML = `<thead><tr><th>Indicador</th><th>Simulado</th><th>M/G/c</th><th>M/G/c con avance</th><th></th></tr></thead><tbody>
+      ${filasGrupo('Taquillas manuales', R.manual)}${filasGrupo('Taquillas TAG', R.tagGrupo)}
+      <tr><td colspan="5" style="text-align:left;color:var(--muted)">Recorrido libre por categoría: ${R.tLibre.map(x => fmt(x)).join(' / ')} s · avance a la taquilla: ${R.tAvance.map(x => fmt(x)).join(' / ')} s · modo ${p.modoFisico ? 'físico' : 'discreto puro'}</td></tr></tbody>`;
+  }
+
+  $('btnRep').addEventListener('click', () => {
+    const n = Math.min(Math.max(Math.round(Number($('nRep').value) || 20), 2), 100);
+    const pb = leerParametros(); pb.modoFisico = !$('repPuro').checked;
+    const W = [], Lq = [], rho = [], Wt = []; let teo = null, k = 0;
+    $('btnRep').disabled = true;
+    const uno = () => {
+      const pr = Object.assign({}, pb, { semilla: ((pb.semilla + 7919 * (k + 1)) % 2147483646) || 1 });
+      const mm = new Peaje.Motor(pr); while (!mm.terminado) mm.paso(); const R = mm.resultados();
+      if (R.manual.c) { W.push(R.manual.Wq_sim); Lq.push(R.manual.Lq_sim); rho.push(R.manual.rho_sim); teo = R.manual; }
+      if (R.tagGrupo.c) Wt.push(R.tagGrupo.Wq_sim);
+      k++;
+      $('tablaRep').innerHTML = `<tbody><tr><td>Corriendo réplica ${k} de ${n}…</td></tr></tbody>`;
+      if (k < n) setTimeout(uno, 0); else fin();
+    };
+    // IC 95 %: t de Student aproximada (1,96 para n grande)
+    const est = a => { const n = a.length, m = a.reduce((x, y) => x + y, 0) / n; const s = Math.sqrt(a.reduce((x, y) => x + (y - m) ** 2, 0) / (n - 1)); const tc = n >= 30 ? 1.96 : 1.96 + 2.4 / (n - 1); return [m, tc * s / Math.sqrt(n)]; };
+    const fin = () => {
+      $('btnRep').disabled = false;
+      if (!teo) { $('tablaRep').innerHTML = '<tbody><tr><td>No hay taquillas manuales.</td></tr></tbody>'; return; }
+      const [mw, iw] = est(W), [ml, il] = est(Lq), [mr, ir] = est(rho);
+      $('tablaRep').innerHTML = `<thead><tr><th>Taquillas manuales</th><th>Media ± IC 95 %</th><th>M/G/c</th><th>M/G/c con avance</th><th>M/M/c</th></tr></thead><tbody>
+        <tr><td>Utilización ρ</td><td class="num">${fmt(mr, 3)} ± ${fmt(ir, 3)}</td><td class="num">${fmt(teo.teoria.rho, 3)}</td><td class="num">${fmt(teo.teoriaCorregida.rho, 3)}</td><td class="num">${fmt(teo.teoria.rho, 3)}</td></tr>
+        <tr><td>Espera Wq (s)</td><td class="num">${fmt(mw)} ± ${fmt(iw)}</td><td class="num">${fmt(teo.teoria.Wq)}</td><td class="num">${fmt(teo.teoriaCorregida.Wq)}</td><td class="num">${fmt(teo.teoria.Wq_MMc)}</td></tr>
+        <tr><td>Cola media Lq (veh)</td><td class="num">${fmt(ml, 2)} ± ${fmt(il, 2)}</td><td class="num">${fmt(teo.teoria.Lq, 2)}</td><td class="num">${fmt(teo.teoriaCorregida.Lq, 2)}</td><td class="num">${fmt(teo.teoria.Lq_MMc, 2)}</td></tr>
+        <tr><td colspan="5" style="text-align:left;color:var(--muted)">${n} réplicas de ${fmt(pb.tFin, 0)} s, modo ${pb.modoFisico ? 'físico' : 'discreto puro'}${Wt.length ? ` · espera TAG ${fmt(est(Wt)[0])} s` : ''}</td></tr></tbody>`;
+    };
+    setTimeout(uno, 0);
+  });
+
+  // ---------------- Generador ----------------
+  function probarGenerador() {
+    PAL = {};
+    const sem = Math.round(Number($('gSem').value) || 1), n = Math.min(Math.max(Math.round(Number($('gN').value) || 10000), 100), 200000);
+    const g = new Peaje.GeneradorLCG(sem); const u = new Float64Array(n); for (let i = 0; i < n; i++) u[i] = g.uniforme();
+    const gv = new Peaje.GeneradorLCG(1); for (let i = 0; i < 10000; i++) gv.siguienteEntero();
+    $('pmCheck').textContent = `Verificación Park–Miller: con semilla 1, X₁₀₀₀₀ = ${gv.estado.toLocaleString('es-CO')} (debe ser 1.043.618.065) → ${gv.estado === 1043618065 ? 'correcto' : 'error'}`;
+    const z = 1.959964, k = 10;
+    const media = u.reduce((a, b) => a + b, 0) / n;
+    const vari = u.reduce((a, b) => a + (b - media) ** 2, 0) / (n - 1);
+    const O = new Array(k).fill(0); for (const x of u) O[Math.min(Math.floor(x * k), k - 1)]++;
+    const E = n / k, chi2 = O.reduce((a, o) => a + (o - E) ** 2 / E, 0);
+    const wh = (gl, zz) => gl * Math.pow(1 - 2 / (9 * gl) + zz * Math.sqrt(2 / (9 * gl)), 3);
+    const chiCrit = wh(k - 1, 1.644854);
+    const us = Array.from(u).sort((a, b) => a - b); let D = 0;
+    for (let i = 0; i < n; i++) D = Math.max(D, (i + 1) / n - us[i], us[i] - i / n);
+    const ksCrit = Math.sqrt(-0.5 * Math.log(0.025)) / Math.sqrt(n);
+    let rachas = 1, sPrev = Math.sign(u[1] - u[0]) || 1;
+    for (let i = 2; i < n; i++) { const s = Math.sign(u[i] - u[i - 1]) || 1; if (s !== sPrev) rachas++; sPrev = s; }
+    const Zr = (rachas - (2 * n - 1) / 3) / Math.sqrt((16 * n - 29) / 90);
+    let num = 0, den = 0; for (let i = 0; i < n; i++) { den += (u[i] - media) ** 2; if (i < n - 1) num += (u[i] - media) * (u[i + 1] - media); }
+    const rho1 = num / den;
+    const gl = n - 1;
+    const fila = (nom, est, crit, ok) => `<tr><td>${nom}</td><td class="num">${est}</td><td class="num">${crit}</td><td>${pill(ok, 'pasa', 'no pasa')}</td></tr>`;
+    const li = 0.5 - z / Math.sqrt(12 * n), ls = 0.5 + z / Math.sqrt(12 * n);
+    const vi = wh(gl, -z) / (12 * gl), vs = wh(gl, z) / (12 * gl);
+    $('tablaGen').innerHTML = `<thead><tr><th>Prueba</th><th>Estadístico</th><th>Crítico / límites</th><th></th></tr></thead><tbody>
+      ${fila('Medias', fmt(media, 5), fmt(li, 4) + ' – ' + fmt(ls, 4), media >= li && media <= ls)}
+      ${fila('Varianza', fmt(vari, 5), fmt(vi, 4) + ' – ' + fmt(vs, 4), vari >= vi && vari <= vs)}
+      ${fila('Chi-cuadrado (9 gl)', fmt(chi2, 3), fmt(chiCrit, 3), chi2 < chiCrit)}
+      ${fila('Kolmogorov–Smirnov', fmt(D, 5), fmt(ksCrit, 5), D < ksCrit)}
+      ${fila('Rachas arriba/abajo (Z)', fmt(Zr, 3), '± ' + fmt(z, 3), Math.abs(Zr) < z)}
+      ${fila('Autocorrelación retardo 1', fmt(rho1, 5), '± ' + fmt(z / Math.sqrt(n), 5), Math.abs(rho1) < z / Math.sqrt(n))}</tbody>`;
+    $('primeros').textContent = Array.from(u.slice(0, 12)).map((x, i) => `U${String(i + 1).padStart(2, '0')} = ${x.toFixed(10)}`).join('\n');
+    // histograma
+    let [g2, w, h] = prep($('cvHist'));
+    const izq = 40, top = 10, abajo = 22, W = w - izq - 10, H = h - top - abajo, yMax = Math.max(...O, E) * 1.15;
+    g2.fillStyle = css('--muted'); g2.font = '10px ' + css('--mono'); g2.textAlign = 'right';
+    g2.strokeStyle = css('--line');
+    for (let i = 0; i <= 4; i++) { const yv = yMax * i / 4, yy = top + H - yv / yMax * H; g2.beginPath(); g2.moveTo(izq, yy); g2.lineTo(izq + W, yy); g2.stroke(); g2.fillText(String(Math.round(yv)), izq - 4, yy + 3); }
+    g2.fillStyle = css('--sign');
+    O.forEach((o, i) => { const bw = W / k; g2.fillRect(izq + i * bw + 2, top + H - o / yMax * H, bw - 4, o / yMax * H); });
+    g2.strokeStyle = css('--warn'); g2.setLineDash([6, 4]); g2.lineWidth = 2; g2.beginPath(); g2.moveTo(izq, top + H - E / yMax * H); g2.lineTo(izq + W, top + H - E / yMax * H); g2.stroke(); g2.setLineDash([]);
+    g2.fillStyle = css('--muted'); g2.textAlign = 'center'; for (let i = 0; i <= k; i += 2) g2.fillText((i / k).toFixed(1), izq + i * W / k, h - 6);
+    // dispersión
+    [g2, w, h] = prep($('cvDisp'));
+    const lado = Math.min(w - 50, h - 30), ox = (w - lado) / 2, oy = 8;
+    g2.strokeStyle = css('--line'); g2.strokeRect(ox, oy, lado, lado);
+    g2.fillStyle = css('--auto'); const nP = Math.min(n - 1, 5000);
+    for (let i = 0; i < nP; i++) g2.fillRect(ox + u[i] * lado, oy + (1 - u[i + 1]) * lado, 1.4, 1.4);
+    g2.fillStyle = css('--muted'); g2.font = '10px ' + css('--mono'); g2.textAlign = 'center';
+    g2.fillText('0', ox, oy + lado + 14); g2.fillText('1', ox + lado, oy + lado + 14); g2.fillText(`${nP} pares`, ox + lado / 2, oy + lado + 14);
+  }
+  $('btnGen').addEventListener('click', probarGenerador);
+
+  // ---------------- MATLAB ----------------
+  function actualizarCodigo() {
+    const L = ['p = parametros_peaje();'];
+    for (const c of CAMPOS) if (c.length > 1 && p[c[0]] !== base[c[0]]) L.push(`p.${c[0]} = ${p[c[0]]};`);
+    if (p.L !== base.L) L.push(`p.xSalida = ${p.xSalida};`);
+    if (!p.modoFisico) L.push('p.modoFisico = false;');
+    L.push('R = simular_peaje(p);', 'imprimir_resumen(R)');
+    $('codigoMat').textContent = L.join('\n');
+  }
+  $('btnCopiar').addEventListener('click', () => {
+    const txt = $('codigoMat').textContent;
+    const ok = () => { $('copiado').textContent = 'Copiado'; setTimeout(() => $('copiado').textContent = '', 2000); };
+    const seleccionar = () => { const r = document.createRange(); r.selectNodeContents($('codigoMat')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); $('copiado').textContent = 'Seleccionado: use Ctrl+C'; };
+    try { navigator.clipboard.writeText(txt).then(ok, seleccionar); } catch (e) { seleccionar(); }
+  });
+
+  let jsonMat = null;
+  $('archivoMat').addEventListener('change', ev => {
+    const f = ev.target.files[0]; if (!f) return;
+    const lector = new FileReader();
+    lector.onload = () => {
+      try { jsonMat = JSON.parse(lector.result); } catch (e) { $('tablaMat').innerHTML = '<tbody><tr><td>El archivo no es un JSON válido. Exporte de nuevo desde MATLAB con exportar_json.</td></tr></tbody>'; return; }
+      const Jp = jsonMat.parametros || {}, Rm = jsonMat.resumen || {};
+      const pj = Object.assign(Peaje.parametrosPeaje(), Jp); pj.xSalida = (Jp.xSalida !== undefined) ? Jp.xSalida : pj.L + 150;
+      const mm = new Peaje.Motor(pj); while (!mm.terminado) mm.paso(); const Rw = mm.resultados();
+      const fila = (n, a, b, d = 2) => `<tr><td>${n}</td><td class="num">${fmt(a, d)}</td><td class="num">${fmt(b, d)}</td><td>${pill(isFinite(a) && isFinite(b) && Math.abs(a - b) <= Math.max(1e-6, 0.02 * Math.abs(a)))}</td></tr>`;
+      $('tablaMat').innerHTML = `<thead><tr><th>Indicador (semilla ${Jp.semilla})</th><th>MATLAB</th><th>Web</th><th></th></tr></thead><tbody>
+        ${fila('Vehículos generados', Rm.generados, Rw.generados, 0)}
+        ${fila('Atendidos', Rm.atendidos, Rw.atendidos, 0)}
+        ${fila('Recaudo (COP)', Rm.recaudo, Rw.recaudo, 0)}
+        ${Rm.manual && Rm.manual.n !== undefined ? fila('ρ manual', Rm.manual.rho_sim, Rw.manual.rho_sim, 3) + fila('Wq manual (s)', Rm.manual.Wq_sim, Rw.manual.Wq_sim) + fila('Lq manual', Rm.manual.Lq_sim, Rw.manual.Lq_sim) : ''}
+        ${Rm.tag && Rm.tag.n !== undefined ? fila('Wq TAG (s)', Rm.tag.Wq_sim, Rw.tagGrupo.Wq_sim) : ''}
+        <tr><td colspan="4" style="text-align:left;color:var(--muted)">Archivo de ${jsonMat.origen || 'MATLAB'} ${jsonMat.version || ''}. Diferencias en el último decimal pueden venir de las funciones matemáticas de cada lenguaje.</td></tr></tbody>`;
+      $('btnAplicarMat').disabled = false;
+    };
+    lector.readAsText(f);
+  });
+  $('btnAplicarMat').addEventListener('click', () => {
+    if (!jsonMat) return; const Jp = jsonMat.parametros || {};
+    for (const c of CAMPOS) if (c.length > 1 && Jp[c[0]] !== undefined) { const i = $('p_' + c[0]); i.value = Jp[c[0]]; i.classList.toggle('cambiado', Number(i.value) !== base[c[0]]); }
+    if (Jp.modoFisico !== undefined) $('p_modoFisico').checked = !!Jp.modoFisico;
+    reiniciar(); mostrar('sim');
+  });
+
+  // ---------------- Pestañas ----------------
+  const tabs = ['sim', 'val', 'gen', 'mat'];
+  function mostrar(id) {
+    for (const t of tabs) { $('tab-' + t).setAttribute('aria-selected', String(t === id)); $('pan-' + t).hidden = t !== id; }
+    if (id === 'gen' && !$('tablaGen').innerHTML) probarGenerador();
+    if (id === 'sim') dibujar();
+  }
+  for (const t of tabs) $('tab-' + t).addEventListener('click', () => mostrar(t));
+
+  // Estado inicial: corrida de ejemplo ya avanzada 10 minutos para que la vista no arranque vacía
+  reiniciar();
+  for (let i = 0; i < 6000; i++) M.paso();
+  dibujar(); kpis();
+  $('btnPlay').textContent = 'Continuar';
+  window.addEventListener('resize', () => dibujar());
+  requestAnimationFrame(cuadro);
+})();
+</script>
