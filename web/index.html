@@ -54,6 +54,7 @@ body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body);
 .ctrl label { font-size: .86rem; color: var(--ink); }
 .ctrl .grupo { grid-column: 1 / -1; font: 600 .74rem var(--display); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-top: 8px; border-top: 1px solid var(--line); padding-top: 8px; }
 .ctrl .grupo:first-child { margin-top: 0; border-top: 0; padding-top: 0; }
+select { width: 100%; font: 600 .9rem var(--mono); padding: 4px 6px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--ink); }
 input[type="number"] { width: 100%; font: 600 .9rem var(--mono); padding: 4px 6px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
 input.cambiado { border-color: var(--warn); box-shadow: 0 0 0 1px var(--warn); }
 .chk { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; font-size: .86rem; }
@@ -101,7 +102,7 @@ pre.codigo { font: .84rem/1.45 var(--mono); background: var(--bg); border: 1px s
       <div class="sub">Modelos de Simulación · UNINTEP · Alternativa 1</div>
       <h1>Simulador Híbrido de Tráfico y Peajes</h1>
     </div>
-    <div class="km" title="Longitud del tramo de aproximación">Taquilla a <span id="kmL">600</span> m</div>
+    <div class="km" title="Escenario y longitud del tramo de aproximación">Peaje <span id="kmNom">Riofrío</span> · taquilla a <span id="kmL">600</span> m</div>
   </header>
 
   <nav class="tabs" role="tablist">
@@ -135,7 +136,7 @@ pre.codigo { font: .84rem/1.45 var(--mono); background: var(--bg); border: 1px s
           <div class="leyenda">
             <span><i style="background:var(--auto)"></i>Auto (Cat. I)</span>
             <span><i style="background:var(--bus)"></i>Bus (Cat. II)</span>
-            <span><i style="background:var(--truck)"></i>Camión (Cat. III)</span>
+            <span><i style="background:var(--truck)"></i>Camión (Cat. III–V)</span>
             <span><i style="background:var(--ok)"></i>Taquilla libre</span>
             <span><i style="background:var(--stop)"></i>Taquilla cobrando</span>
           </div>
@@ -199,7 +200,7 @@ pre.codigo { font: .84rem/1.45 var(--mono); background: var(--bg); border: 1px s
     <div class="dos">
       <div class="panel">
         <h2>Llevar estos parámetros a MATLAB</h2>
-        <p class="nota" style="margin-top:0">Pegue este bloque en <code>defensa_en_caliente.m</code> o en la consola, después de <code>p = parametros_peaje();</code></p>
+        <p class="nota" style="margin-top:0">Pegue este bloque en <code>defensa_en_caliente.m</code> o en la consola, en lugar de <code>p = parametros_peaje();</code></p>
         <pre class="codigo" id="codigoMat"></pre>
         <button class="btn" id="btnCopiar" type="button">Copiar código</button> <span class="nota" id="copiado"></span>
       </div>
@@ -243,8 +244,20 @@ pre.codigo { font: .84rem/1.45 var(--mono); background: var(--bg); border: 1px s
     ['Corrida'],
     ['tFin', 'Duración (s)', 300, 14400, 300],
   ];
-  const base = Peaje.parametrosPeaje();
+  let base = Peaje.parametrosPeaje('riofrio');
   const form = $('form');
+  // Selector de escenario (Riofrío / Toro): carga λ y la mezcla de categorías
+  {
+    const l = document.createElement('label'); l.htmlFor = 'p_escenario'; l.textContent = 'Escenario';
+    const sel = document.createElement('select'); sel.id = 'p_escenario';
+    for (const [k, e] of Object.entries(Peaje.ESCENARIOS)) { const o = document.createElement('option'); o.value = k; o.textContent = e.nombre; sel.appendChild(o); }
+    sel.addEventListener('change', () => {
+      base = Peaje.parametrosPeaje(sel.value);
+      for (const c of CAMPOS) if (c.length > 1) { const i = $('p_' + c[0]); i.value = base[c[0]]; i.classList.remove('cambiado'); }
+      reiniciar();
+    });
+    form.appendChild(l); form.appendChild(sel);
+  }
   for (const c of CAMPOS) {
     if (c.length === 1) { const d = document.createElement('div'); d.className = 'grupo'; d.textContent = c[0]; form.appendChild(d); continue; }
     const [k, et, mi, ma, st] = c;
@@ -259,7 +272,7 @@ pre.codigo { font: .84rem/1.45 var(--mono); background: var(--bg); border: 1px s
   $('p_modoFisico').addEventListener('change', reiniciar);
 
   function leerParametros() {
-    const p = Peaje.parametrosPeaje();
+    const p = Peaje.parametrosPeaje($('p_escenario').value);
     for (const c of CAMPOS) if (c.length > 1) {
       let v = Number($('p_' + c[0]).value);
       if (!isFinite(v)) v = base[c[0]];
@@ -283,7 +296,7 @@ pre.codigo { font: .84rem/1.45 var(--mono); background: var(--bg); border: 1px s
   function reiniciar() {
     corriendo = false; $('btnPlay').textContent = 'Iniciar';
     p = leerParametros(); M = new Peaje.Motor(p); ultimoR = null;
-    $('kmL').textContent = p.L;
+    $('kmL').textContent = p.L; $('kmNom').textContent = Peaje.ESCENARIOS[p.escenario].nombre;
     actualizarCodigo(); dibujar(); kpis(); leyendaCola();
   }
 
@@ -542,7 +555,7 @@ pre.codigo { font: .84rem/1.45 var(--mono); background: var(--bg); border: 1px s
 
   // ---------------- MATLAB ----------------
   function actualizarCodigo() {
-    const L = ['p = parametros_peaje();'];
+    const L = [`p = parametros_peaje('${p.escenario}');`];
     for (const c of CAMPOS) if (c.length > 1 && p[c[0]] !== base[c[0]]) L.push(`p.${c[0]} = ${p[c[0]]};`);
     if (p.L !== base.L) L.push(`p.xSalida = ${p.xSalida};`);
     if (!p.modoFisico) L.push('p.modoFisico = false;');
@@ -563,7 +576,7 @@ pre.codigo { font: .84rem/1.45 var(--mono); background: var(--bg); border: 1px s
     lector.onload = () => {
       try { jsonMat = JSON.parse(lector.result); } catch (e) { $('tablaMat').innerHTML = '<tbody><tr><td>El archivo no es un JSON válido. Exporte de nuevo desde MATLAB con exportar_json.</td></tr></tbody>'; return; }
       const Jp = jsonMat.parametros || {}, Rm = jsonMat.resumen || {};
-      const pj = Object.assign(Peaje.parametrosPeaje(), Jp); pj.xSalida = (Jp.xSalida !== undefined) ? Jp.xSalida : pj.L + 150;
+      const pj = Object.assign(Peaje.parametrosPeaje(Jp.escenario), Jp); pj.xSalida = (Jp.xSalida !== undefined) ? Jp.xSalida : pj.L + 150;
       const mm = new Peaje.Motor(pj); while (!mm.terminado) mm.paso(); const Rw = mm.resultados();
       const fila = (n, a, b, d = 2) => `<tr><td>${n}</td><td class="num">${fmt(a, d)}</td><td class="num">${fmt(b, d)}</td><td>${pill(isFinite(a) && isFinite(b) && Math.abs(a - b) <= Math.max(1e-6, 0.02 * Math.abs(a)))}</td></tr>`;
       $('tablaMat').innerHTML = `<thead><tr><th>Indicador (semilla ${Jp.semilla})</th><th>MATLAB</th><th>Web</th><th></th></tr></thead><tbody>
@@ -581,6 +594,7 @@ pre.codigo { font: .84rem/1.45 var(--mono); background: var(--bg); border: 1px s
     if (!jsonMat) return; const Jp = jsonMat.parametros || {};
     for (const c of CAMPOS) if (c.length > 1 && Jp[c[0]] !== undefined) { const i = $('p_' + c[0]); i.value = Jp[c[0]]; i.classList.toggle('cambiado', Number(i.value) !== base[c[0]]); }
     if (Jp.modoFisico !== undefined) $('p_modoFisico').checked = !!Jp.modoFisico;
+    if (Jp.escenario && Peaje.ESCENARIOS[Jp.escenario]) { $('p_escenario').value = Jp.escenario; base = Peaje.parametrosPeaje(Jp.escenario); }
     reiniciar(); mostrar('sim');
   });
 

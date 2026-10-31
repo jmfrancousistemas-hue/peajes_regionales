@@ -2,6 +2,7 @@ function imprimir_resumen(R)
 %IMPRIMIR_RESUMEN Muestra en consola los indicadores y la comparación con la teoría.
     p = R.p;
     fprintf('\n=========== RESUMEN DE LA CORRIDA ===========\n');
+    fprintf('Escenario: %s\n', p.escenario);
     fprintf('Semilla %d | lambda = %g veh/h | %d manuales + %d TAG | modo físico: %d\n', ...
             p.semilla, p.lambda, p.carrilesManuales, p.carrilesTag, p.modoFisico);
     fprintf('Factores IDM: v0 %.2f  T %.2f  a %.2f  b %.2f\n', p.factor_v0, p.factor_T, p.factor_a, p.factor_b);

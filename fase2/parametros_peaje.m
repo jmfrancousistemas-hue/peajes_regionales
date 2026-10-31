@@ -1,25 +1,43 @@
-function p = parametros_peaje()
-%PARAMETROS_PEAJE Parámetros por defecto del simulador híbrido.
+function p = parametros_peaje(escenario)
+%PARAMETROS_PEAJE Parámetros del simulador híbrido por escenario.
+%   p = parametros_peaje()            escenario 'riofrio' (por defecto)
+%   p = parametros_peaje('toro')      escenario Toro
 %   Todo lo que el docente puede alterar en la "defensa en caliente" está
 %   aquí. Ejemplo:
-%       p = parametros_peaje();
+%       p = parametros_peaje('riofrio');
 %       p.factor_b = 0.5;     % frenado más suave
 %       p.semilla  = 777;     % otra semilla
 %       R = simular_peaje(p);
 %
-%   Fuentes de los valores (ver informe de investigación):
+%   Fuentes (ver sección "Parámetros y fuentes" del trabajo escrito):
+%   - Llegadas: TPDM de datos.gov.co (ANI). lambda = TPDM / 24 h.
+%       Riofrío: 13.500-15.000 veh/día -> 560-625 veh/h (se usa 590)
+%       Toro:     6.500-8.000 veh/día  -> 270-333 veh/h (se usa 300)
+%   - Mezcla de categorías: ANI, OETR.
+%   - Cobro manual: Cat. I 12-15 s, Cat. II 18-22 s, Cat. III-V 25-35 s
+%     (se usa el punto medio: 13,5 s / 20 s / 30 s). TAG: 4 s.
+%   - Tarifas: PISA (Cat. I 13.400, II 17.400, III 41.000, IV 56.000, V 61.800).
+%     El modelo agrupa III-V en "Camión" con la tarifa de la Cat. III.
 %   - IDM: Treiber y Kesting, "Traffic Flow Dynamics" (2013).
-%   - Tiempos de cobro manual ~20 s y TAG ~4 s: estudios de campo de peajes.
-%   - Tarifas: peajes INVÍAS Riofrío y Toro (Vía Panorama, Roldanillo),
-%     Resolución INVÍAS enero 2024 (Cat. I subió a 10.900 en ago-2024). Verificar la resolución vigente antes de sustentar.
+
+    if nargin < 1 || isempty(escenario), escenario = 'riofrio'; end
+    p.escenario = lower(char(escenario));
 
     % ---------------- Estocásticos (Rol B) ----------------
     p.semilla      = 12345;             % semilla del LCG Park-Miller
-    p.lambda       = 450;               % tasa de arribo total (veh/h), proceso de Poisson
-    p.mezcla       = [0.70 0.10 0.20];  % proporción Auto / Bus / Camión
-    p.propTag      = 0.35;              % fracción de vehículos con TAG (pago electrónico)
-    p.servManual   = 20;                % media del cobro manual de un auto (s)
-    p.cvManual     = 0.40;              % coeficiente de variación del cobro manual
+    switch p.escenario
+        case 'riofrio'
+            p.lambda = 590;                 % veh/h (TPDM 14.150 / 24 h)
+            p.mezcla = [0.65 0.08 0.27];    % Auto / Bus / Camión
+        case 'toro'
+            p.lambda = 300;                 % veh/h (TPDM 7.250 / 24 h)
+            p.mezcla = [0.60 0.05 0.35];
+        otherwise
+            error('Escenario desconocido: use ''riofrio'' o ''toro''.');
+    end
+    p.propTag      = 0.35;              % fracción con TAG (supuesto: no hay dato publicado)
+    p.servManual   = 13.5;              % media del cobro manual de un auto, Cat. I (s)
+    p.cvManual     = 0.30;              % coeficiente de variación del cobro manual
     p.servTag      = 4;                 % lectura del TAG y apertura de talanquera (s)
     p.cvTag        = 0.25;
 
@@ -56,6 +74,6 @@ function p = parametros_peaje()
         'b',      {1.5,      1.5,      1.2}, ...
         's0',     {2.0,      3.0,      3.0}, ...
         'largo',  {4.5,      12.0,     16.0}, ...
-        'fServ',  {1.0,      1.3,      1.5}, ...
-        'tarifa', {10400,    11200,    24100});
+        'fServ',  {1.0,      20/13.5,  30/13.5}, ...   % Cat. II 20 s, Cat. III-V 30 s
+        'tarifa', {13400,    17400,    41000});
 end

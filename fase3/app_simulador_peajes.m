@@ -24,9 +24,12 @@ function app_simulador_peajes()
 
     % ---------------- Panel de parámetros ----------------
     pnl = uipanel(gl, 'Title', 'Parámetros');
-    g = uigridlayout(pnl, [16 2]);
-    g.RowHeight = repmat({26}, 1, 16);
+    g = uigridlayout(pnl, [17 2]);
+    g.RowHeight = repmat({26}, 1, 17);
     g.ColumnWidth = {'1.3x', '1x'};
+    uilabel(g, 'Text', 'Escenario');
+    ddEsc = uidropdown(g, 'Items', {'Riofrío', 'Toro'}, 'ItemsData', {'riofrio', 'toro'}, ...
+                       'Value', p.escenario, 'ValueChangedFcn', @cambiarEscenario);
     campos = { ...
         'semilla',          'Semilla',                 p.semilla;
         'lambda',           'Llegadas λ (veh/h)',      p.lambda;
@@ -67,8 +70,15 @@ function app_simulador_peajes()
     reiniciar();
 
     % ======================================================================
+    function cambiarEscenario(~, ~)
+        % Carga λ y la mezcla del escenario elegido y reinicia
+        q = parametros_peaje(ddEsc.Value);
+        ed.lambda.Value = q.lambda;
+        reiniciar();
+    end
+
     function leerParametros()
-        p = parametros_peaje();
+        p = parametros_peaje(ddEsc.Value);
         f = fieldnames(ed);
         for j = 1:numel(f), p.(f{j}) = ed.(f{j}).Value; end
         p.carrilesManuales = round(p.carrilesManuales);

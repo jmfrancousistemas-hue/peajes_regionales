@@ -30,10 +30,18 @@ web/    index.html, motor.js (gemelo del motor MATLAB)                 (Rol C)
 docs/   informe de investigación con parámetros y fuentes
 ```
 
+## Escenarios
+
+| Escenario | Llamada | λ (veh/h) | Mezcla Auto/Bus/Camión |
+| --- | --- | --- | --- |
+| Riofrío (por defecto) | `parametros_peaje('riofrio')` | 590 | 65 / 8 / 27 % |
+| Toro | `parametros_peaje('toro')` | 300 | 60 / 5 / 35 % |
+
+Cobro manual: 13,5 s (Cat. I), 20 s (Cat. II), 30 s (Cat. III a V), CV 0,3. TAG: 4 s, 35 % de los vehículos. Tarifas PISA: 13.400 / 17.400 / 41.000 COP. La app de MATLAB y la web tienen un selector de escenario.
+
 ## Notas
 
 - Todos los parámetros que el docente puede cambiar están en `fase2/parametros_peaje.m`.
 - `p.modoFisico = false` apaga la dinámica continua; sirve para verificar el motor discreto contra M/G/c.
-- El código MATLAB no se pudo ejecutar en el entorno donde se escribió. El algoritmo se probó con su gemelo en JavaScript (`web/motor.js`). Corran `fase1_demo` y `fase2_demo` apenas lo descarguen y reporten cualquier error.
+- Probado en MATLAB R2025b. El motor de la web (`web/motor.js`) es una traducción línea por línea del motor MATLAB.
 - Con la misma semilla, MATLAB y la web consumen los números aleatorios en el mismo orden. Diferencias en el último decimal de `exp`, `log` o `^` entre lenguajes pueden, en casos raros, cambiar un evento; los promedios no cambian.
-- Las tarifas son de enero de 2024. Verifiquen la resolución vigente de INVÍAS antes de sustentar.

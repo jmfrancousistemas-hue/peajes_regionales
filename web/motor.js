@@ -36,17 +36,26 @@
   }
 
   // ---------------- Parámetros ----------------
-  function parametrosPeaje() {
+  // Escenarios calibrados (ver parametros_peaje.m): lambda = TPDM / 24 h
+  const ESCENARIOS = {
+    riofrio: { nombre: 'Riofrío', lambda: 590, mezcla: [0.65, 0.08, 0.27] },
+    toro:    { nombre: 'Toro',    lambda: 300, mezcla: [0.60, 0.05, 0.35] },
+  };
+
+  function parametrosPeaje(escenario = 'riofrio') {
+    const e = ESCENARIOS[escenario] || ESCENARIOS.riofrio;
     return {
-      semilla: 12345, lambda: 450, mezcla: [0.70, 0.10, 0.20], propTag: 0.35,
-      servManual: 20, cvManual: 0.40, servTag: 4, cvTag: 0.25,
+      escenario: ESCENARIOS[escenario] ? escenario : 'riofrio',
+      semilla: 12345, lambda: e.lambda, mezcla: e.mezcla.slice(), propTag: 0.35,
+      servManual: 13.5, cvManual: 0.30, servTag: 4, cvTag: 0.25,
       carrilesManuales: 3, carrilesTag: 1, L: 600, xSalida: 750,
       factor_v0: 1, factor_T: 1, factor_a: 1, factor_b: 1, delta: 4, aFrenadoMax: 9,
       dt: 0.1, tFin: 3600, muestreo: 1, modoFisico: true,
+      // Tarifas PISA: Cat. I 13.400, II 17.400, III 41.000 (III-V agrupadas en Camión)
       cat: [
-        { nombre: 'Auto',   v0: 80 / 3.6, T: 1.5, a: 1.0, b: 1.5, s0: 2.0, largo: 4.5,  fServ: 1.0, tarifa: 10400 },
-        { nombre: 'Bus',    v0: 70 / 3.6, T: 1.8, a: 0.7, b: 1.5, s0: 3.0, largo: 12.0, fServ: 1.3, tarifa: 11200 },
-        { nombre: 'Camión', v0: 60 / 3.6, T: 2.0, a: 0.5, b: 1.2, s0: 3.0, largo: 16.0, fServ: 1.5, tarifa: 24100 },
+        { nombre: 'Auto',   v0: 80 / 3.6, T: 1.5, a: 1.0, b: 1.5, s0: 2.0, largo: 4.5,  fServ: 1.0,       tarifa: 13400 },
+        { nombre: 'Bus',    v0: 70 / 3.6, T: 1.8, a: 0.7, b: 1.5, s0: 3.0, largo: 12.0, fServ: 20 / 13.5, tarifa: 17400 },
+        { nombre: 'Camión', v0: 60 / 3.6, T: 2.0, a: 0.5, b: 1.2, s0: 3.0, largo: 16.0, fServ: 30 / 13.5, tarifa: 41000 },
       ],
     };
   }
@@ -284,6 +293,6 @@
     return Q;
   }
 
-  const API = { GeneradorLCG, parametrosPeaje, idm, Motor, erlangC, tiempoRecorrido };
+  const API = { GeneradorLCG, parametrosPeaje, ESCENARIOS, idm, Motor, erlangC, tiempoRecorrido };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else global.Peaje = API;
 })(typeof window !== 'undefined' ? window : globalThis);
