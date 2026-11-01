@@ -2,7 +2,7 @@ function p = parametros_peaje(escenario)
 %PARAMETROS_PEAJE Parámetros del simulador híbrido por escenario.
 %   p = parametros_peaje()            escenario 'riofrio' (por defecto)
 %   p = parametros_peaje('toro')      escenario Toro
-%   Todo lo que el docente puede alterar en la "defensa en caliente" está
+%   Todo lo que el usuario puede alterar en la "defensa en caliente" está
 %   aquí. Ejemplo:
 %       p = parametros_peaje('riofrio');
 %       p.factor_b = 0.5;     % frenado más suave
@@ -16,7 +16,8 @@ function p = parametros_peaje(escenario)
 %   - Mezcla de categorías: ANI, OETR.
 %   - Cobro manual: Cat. I 12-15 s, Cat. II 18-22 s, Cat. III-V 25-35 s
 %     (se usa el punto medio: 13,5 s / 20 s / 30 s). TAG: 4 s.
-%   - Tarifas: PISA (Cat. I 13.400, II 17.400, III 41.000, IV 56.000, V 61.800).
+%   - Tarifas INVÍAS 2026 para Riofrío y Toro (Cat. I 10.900, II 11.800,
+%     III 25.000, IV 32.000, V 36.000).
 %     El modelo agrupa III-V en "Camión" con la tarifa de la Cat. III.
 %   - IDM: Treiber y Kesting, "Traffic Flow Dynamics" (2013).
 
@@ -75,5 +76,5 @@ function p = parametros_peaje(escenario)
         's0',     {2.0,      3.0,      3.0}, ...
         'largo',  {4.5,      12.0,     16.0}, ...
         'fServ',  {1.0,      20/13.5,  30/13.5}, ...   % Cat. II 20 s, Cat. III-V 30 s
-        'tarifa', {13400,    17400,    41000});
+        'tarifa', {10900,    11800,    25000});
 end

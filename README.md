@@ -12,7 +12,7 @@ Abra MATLAB en esta carpeta y ejecute, en orden:
 | 2 | `run fase2/fase2_demo.m` | Corrida de 1 h, verificación con 30 réplicas contra Erlang C, gráficas y exporta `web/corrida_matlab.json` |
 | 2 | `run fase2/validar_simulink.m` | Construye `aproximacion_peaje.slx` y compara Simulink, ode45 y el motor |
 | 3 | `run fase3/app_simulador_peajes.m` | App con animación en tiempo real |
-| Defensa | `run fase2/defensa_en_caliente.m` | Corrida base contra corrida modificada por el docente |
+| Defensa | `run fase2/defensa_en_caliente.m` | Corrida base contra corrida modificada por el usuario |
 
 Versión web: abra `web/index.html` en el navegador (no necesita internet salvo las fuentes). Para publicarla, suba la carpeta `web/` a un repositorio de GitHub y active GitHub Pages.
 
@@ -37,11 +37,11 @@ docs/   informe de investigación con parámetros y fuentes
 | Riofrío (por defecto) | `parametros_peaje('riofrio')` | 590 | 65 / 8 / 27 % |
 | Toro | `parametros_peaje('toro')` | 300 | 60 / 5 / 35 % |
 
-Cobro manual: 13,5 s (Cat. I), 20 s (Cat. II), 30 s (Cat. III a V), CV 0,3. TAG: 4 s, 35 % de los vehículos. Tarifas PISA: 13.400 / 17.400 / 41.000 COP. La app de MATLAB y la web tienen un selector de escenario.
+Cobro manual: 13,5 s (Cat. I), 20 s (Cat. II), 30 s (Cat. III a V), CV 0,3. TAG: 4 s, 35 % de los vehículos. Tarifas INVÍAS 2026: 10.900 / 11.800 / 25.000 COP (Cat. III a V agrupadas). La app de MATLAB y la web tienen un selector de escenario.
 
 ## Notas
 
-- Todos los parámetros que el docente puede cambiar están en `fase2/parametros_peaje.m`.
+- Todos los parámetros que el usuario puede cambiar están en `fase2/parametros_peaje.m`.
 - `p.modoFisico = false` apaga la dinámica continua; sirve para verificar el motor discreto contra M/G/c.
 - Probado en MATLAB R2025b. El motor de la web (`web/motor.js`) es una traducción línea por línea del motor MATLAB.
 - Con la misma semilla, MATLAB y la web consumen los números aleatorios en el mismo orden. Diferencias en el último decimal de `exp`, `log` o `^` entre lenguajes pueden, en casos raros, cambiar un evento; los promedios no cambian.

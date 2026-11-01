@@ -51,11 +51,11 @@
       carrilesManuales: 3, carrilesTag: 1, L: 600, xSalida: 750,
       factor_v0: 1, factor_T: 1, factor_a: 1, factor_b: 1, delta: 4, aFrenadoMax: 9,
       dt: 0.1, tFin: 3600, muestreo: 1, modoFisico: true,
-      // Tarifas PISA: Cat. I 13.400, II 17.400, III 41.000 (III-V agrupadas en Camión)
+      // Tarifas INVÍAS 2026 (Riofrío y Toro): Cat. I 10.900, II 11.800, III 25.000 (III-V agrupadas en Camión)
       cat: [
-        { nombre: 'Auto',   v0: 80 / 3.6, T: 1.5, a: 1.0, b: 1.5, s0: 2.0, largo: 4.5,  fServ: 1.0,       tarifa: 13400 },
-        { nombre: 'Bus',    v0: 70 / 3.6, T: 1.8, a: 0.7, b: 1.5, s0: 3.0, largo: 12.0, fServ: 20 / 13.5, tarifa: 17400 },
-        { nombre: 'Camión', v0: 60 / 3.6, T: 2.0, a: 0.5, b: 1.2, s0: 3.0, largo: 16.0, fServ: 30 / 13.5, tarifa: 41000 },
+        { nombre: 'Auto',   v0: 80 / 3.6, T: 1.5, a: 1.0, b: 1.5, s0: 2.0, largo: 4.5,  fServ: 1.0,       tarifa: 10900 },
+        { nombre: 'Bus',    v0: 70 / 3.6, T: 1.8, a: 0.7, b: 1.5, s0: 3.0, largo: 12.0, fServ: 20 / 13.5, tarifa: 11800 },
+        { nombre: 'Camión', v0: 60 / 3.6, T: 2.0, a: 0.5, b: 1.2, s0: 3.0, largo: 16.0, fServ: 30 / 13.5, tarifa: 25000 },
       ],
     };
   }
