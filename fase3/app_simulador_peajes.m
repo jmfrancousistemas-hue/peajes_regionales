@@ -1,12 +1,6 @@
 function app_simulador_peajes()
 %APP_SIMULADOR_PEAJES Software interactivo (Fase 3) en MATLAB.
 %   Interfaz con animación en tiempo real del simulador híbrido.
-%   Responsable: Rol C (GUI y animación), usando el motor de los Roles A y B.
-%
-%   Ejecutar:  app_simulador_peajes
-%   Funciona en MATLAB de escritorio y en MATLAB Online (navegador).
-%   Para usarla desde App Designer: cree una app nueva y llame a
-%   motor_inicializar / motor_paso / motor_resultados desde sus callbacks.
 
     raiz = fileparts(fileparts(mfilename('fullpath')));
     addpath(fullfile(raiz, 'fase1'), fullfile(raiz, 'fase2'));
@@ -17,7 +11,7 @@ function app_simulador_peajes()
     colores = [0.13 0.47 0.71; 0.95 0.55 0.10; 0.80 0.15 0.15];   % Auto, Bus, Camión
 
     % ---------------- Ventana ----------------
-    fig = uifigure('Name', 'Simulador Híbrido de Tráfico y Peajes - UNINTEP', ...
+    fig = uifigure('Name', 'Simulador Híbrido de Tráfico y Peajes  - UNINTEP', ...
                    'Position', [60 60 1280 760], 'CloseRequestFcn', @cerrar);
     gl = uigridlayout(fig, [1 2]);
     gl.ColumnWidth = {280, '1x'};

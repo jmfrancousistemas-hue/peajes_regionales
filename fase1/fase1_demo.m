@@ -1,13 +1,11 @@
 %% FASE 1 - Generador de números pseudoaleatorios U(0,1)
-% Proyecto Final - Modelos de Simulación (UNINTEP)
+% Proyecto Final - Modelos de Simulación
 % Alternativa 1: Simulador Híbrido de Tráfico y Peajes Regionales
-%
-% Ejecutar con F5. Cambie la semilla para la "defensa en caliente".
 
 clear; clc; close all;
 addpath(fileparts(mfilename('fullpath')));
 
-semilla = 12345;     % <-- el docente puede cambiar este valor
+semilla = 12345;     % Valor de la semilla
 n       = 10000;     % tamaño de la muestra
 alfa    = 0.05;
 

@@ -1,5 +1,5 @@
 %% FASE 2 - Núcleo matemático del simulador híbrido (backend)
-% Proyecto Final - Modelos de Simulación (UNINTEP)
+% Proyecto Final - Modelos de Simulación
 % Alternativa 1: Simulador Híbrido de Tráfico y Peajes Regionales
 %
 % 1. Corrida base con física (IDM + eventos discretos)
