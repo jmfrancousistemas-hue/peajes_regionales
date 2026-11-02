@@ -51,7 +51,7 @@ bash servidor_linux/scripts/iniciar.sh
 |---|---|---|
 | Administración de la app (`/admin.html`) | `admin` | `admin123` |
 | Grafana | `admin` | `admin123` |
-| File Browser | `admin` | `admin` (cámbiela al entrar: Settings → Profile) |
+| File Browser | `admin` | `peajes2026admin` |
 | Adminer | servidor `db`, usuario `peajes`, base `peajes` | `peajes` |
 
 Para cambiarlas, copie `.env.example` como `.env`, edite los valores y ejecute `docker compose up -d` dentro de `servidor_linux`.

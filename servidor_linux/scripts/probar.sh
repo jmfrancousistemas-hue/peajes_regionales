@@ -45,6 +45,10 @@ curl -fsS -u "$ADMIN" "$APP/api/admin/resumen" | grep -q '"taquillas"' && ok "Re
 r=$(curl -fsS -u "$ADMIN" -X POST "$APP/api/admin/cierre")
 echo "$r" | grep -q '"archivo"' && ok "Cierre de caja generado" || mal "Cierre: $r"
 
+r=$(curl -s -X POST http://localhost:8081/api/login -H 'Content-Type: application/json' -d "{\"username\":\"admin\",\"password\":\"${FB_PASS:-peajes2026admin}\"}")
+[ -n "$r" ] && ! echo "$r" | grep -qi "forbidden\|incorrect\|error" && ok "Ingreso a File Browser con admin" || mal "File Browser no acepta la clave: $r"
+curl -fsS -o /dev/null http://localhost:8081/api/resources/reportes -H "X-Auth: $r" && ok "File Browser ve la carpeta reportes" || mal "File Browser sin carpeta reportes"
+
 echo "6. Mensajería y monitoreo"
 sleep 2
 curl -fsS "http://localhost:8090/peajes-alertas/json?poll=1&since=10m" | grep -q 'Recarga' && ok "Aviso de recarga llegó a ntfy" || mal "No llegó el aviso a ntfy"
