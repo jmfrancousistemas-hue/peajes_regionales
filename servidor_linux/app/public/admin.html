@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Peajes Regionales - Administración</title>
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<header>
+  <div class="logo">P</div>
+  <h1>Administración</h1>
+  <nav>
+    <a href="index.html">Portal</a>
+    <a href="taquillas.html">Taquillas</a>
+    <a href="tag.html">TAG y recargas</a>
+    <a href="admin.html">Administración</a>
+  </nav>
+</header>
+<main>
+  <div class="kpis" id="kpis"></div>
+
+  <div class="rejilla">
+    <div class="tarjeta">
+      <h3>Recaudo de hoy por taquilla</h3>
+      <table id="tablaTaq"></table>
+    </div>
+    <div class="tarjeta">
+      <h3>Simulación de tráfico</h3>
+      <p class="sub">Genera vehículos con la mezcla del simulador de MATLAB (65 % Cat. I, 8 % Cat. II, 27 % Cat. III-V, 35 % con TAG) para ver la carga en Grafana.</p>
+      <div class="fila">
+        <div><label>Vehículos por hora</label><input id="vh" type="number" value="590"></div>
+        <div><label>Aceleración (x)</label><input id="ac" type="number" value="10"></div>
+      </div>
+      <button class="verde" id="simIni">Iniciar</button>
+      <button class="rojo" id="simFin">Detener</button>
+      <div class="sub" id="simEstado" style="margin-top:10px"></div>
+    </div>
+    <div class="tarjeta">
+      <h3>Cierre de caja y avisos</h3>
+      <p class="sub">El cierre genera un CSV en la carpeta compartida de File Browser (se abre en Excel) y avisa por ntfy.</p>
+      <button class="amarillo" id="cierre">Generar cierre de caja</button>
+      <button class="secundario" id="prueba">Enviar aviso de prueba</button>
+      <div class="resultado" id="resCierre"></div>
+    </div>
+  </div>
+
+  <div class="tarjeta" style="margin-top:16px">
+    <h3>Últimas transacciones</h3>
+    <table id="tablaTx"></table>
+  </div>
+  <div class="tarjeta" style="margin-top:16px">
+    <h3>Tarjetas TAG</h3>
+    <table id="tablaTags"></table>
+  </div>
+</main>
+<script src="comun.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+
+async function refrescar() {
+  try {
+    const r = await api('/api/admin/resumen');
+    const total = r.taquillas.reduce((a, t) => a + t.recaudo, 0);
+    const vehiculos = r.taquillas.reduce((a, t) => a + t.vehiculos, 0);
+    $('kpis').innerHTML = [
+      ['Vehículos hoy', vehiculos.toLocaleString('es-CO')],
+      ['Recaudo hoy', pesos(total)],
+      ['Recargas hoy', pesos(r.recargas)],
+      ['Rechazos TAG hoy', r.rechazos],
+      ['TAG con saldo bajo', r.tags_saldo_bajo],
+    ].map(([t, v]) => `<div class="kpi"><div class="t">${t}</div><div class="v">${v}</div></div>`).join('');
+    $('tablaTaq').innerHTML = '<tr><th>Taquilla</th><th>Tipo</th><th class="num">Vehículos</th><th class="num">Recaudo</th></tr>' +
+      r.taquillas.map((t) => `<tr><td>${t.nombre}</td><td>${t.tipo}</td><td class="num">${t.vehiculos}</td><td class="num">${pesos(t.recaudo)}</td></tr>`).join('');
+    const s = r.simulacion;
+    $('simEstado').innerHTML = s.activa
+      ? `<b style="color:var(--verde)">Corriendo</b>: ${s.vehiculosHora} veh/h × ${s.aceleracion} · ${s.generados} vehículos generados`
+      : 'Detenida';
+
+    const tx = await api('/api/admin/transacciones?limite=15');
+    $('tablaTx').innerHTML = '<tr><th>Ticket</th><th>Taquilla</th><th>Placa</th><th>Cat.</th><th>Medio</th><th class="num">Valor</th><th>Hora</th></tr>' +
+      tx.map((t) => `<tr><td>${t.consecutivo}${t.simulada ? ' <span class="etiqueta">sim</span>' : ''}</td><td>${t.taquilla_id}</td><td>${t.placa}</td><td>${t.categoria}</td><td>${t.medio}</td><td class="num">${pesos(t.valor)}</td><td>${new Date(t.fecha).toLocaleTimeString('es-CO')}</td></tr>`).join('');
+
+    const tags = await api('/api/admin/tags');
+    $('tablaTags').innerHTML = '<tr><th>TAG</th><th>Placa</th><th>Cat.</th><th>Propietario</th><th>Teléfono</th><th class="num">Saldo</th></tr>' +
+      tags.map((t) => `<tr><td>${t.numero_tag}</td><td>${t.placa}</td><td>${t.categoria}</td><td>${t.propietario}</td><td>${t.telefono || ''}</td><td class="num" style="${t.saldo < 30000 ? 'color:var(--rojo);font-weight:600' : ''}">${pesos(t.saldo)}</td></tr>`).join('');
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+$('simIni').onclick = async () => {
+  await api('/api/admin/simulacion', { method: 'POST', body: { accion: 'iniciar', vehiculos_hora: Number($('vh').value), aceleracion: Number($('ac').value) } });
+  refrescar();
+};
+$('simFin').onclick = async () => { await api('/api/admin/simulacion', { method: 'POST', body: { accion: 'detener' } }); refrescar(); };
+$('cierre').onclick = async () => {
+  try {
+    const r = await api('/api/admin/cierre', { method: 'POST' });
+    mostrar($('resCierre'), true, `Archivo <b>${r.archivo}</b><br>${r.vehiculos} vehículos · ${pesos(r.recaudo)}<br>
+      <a href="${urlPuerto(8081)}" target="_blank">Abrir en File Browser</a>`);
+  } catch (e) { mostrar($('resCierre'), false, e.message); }
+};
+$('prueba').onclick = async () => {
+  try {
+    const r = await api('/api/admin/notificacion-prueba', { method: 'POST' });
+    mostrar($('resCierre'), true, `Aviso enviado al tema <b>${r.topico}</b>. <a href="${urlPuerto(8090)}${r.topico}" target="_blank">Abrir ntfy</a>`);
+  } catch (e) { mostrar($('resCierre'), false, e.message); }
+};
+
+refrescar();
+setInterval(refrescar, 3000);
+</script>
+</body>
+</html>

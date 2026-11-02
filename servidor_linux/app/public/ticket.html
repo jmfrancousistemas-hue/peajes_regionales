@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ticket de peaje</title>
+<style>
+  body { font-family: "Courier New", monospace; background: #eee; display: flex; justify-content: center; padding: 24px; }
+  .ticket { background: #fff; width: 300px; padding: 18px 16px; border-top: 6px solid #f5b700; }
+  h1 { font-size: 1rem; text-align: center; margin: 0 0 4px; }
+  .c { text-align: center; font-size: .8rem; }
+  hr { border: 0; border-top: 1px dashed #999; margin: 10px 0; }
+  .f { display: flex; justify-content: space-between; font-size: .85rem; margin: 4px 0; }
+  .total { font-size: 1.15rem; font-weight: bold; }
+  button { margin-top: 14px; width: 100%; padding: 8px; }
+  @media print { body { background: #fff; padding: 0; } button { display: none; } }
+</style>
+</head>
+<body>
+<div class="ticket" id="t">Cargando...</div>
+<script src="comun.js"></script>
+<script>
+(async () => {
+  const c = new URLSearchParams(location.search).get('c');
+  const el = document.getElementById('t');
+  try {
+    const t = await api('/api/tickets/' + encodeURIComponent(c));
+    const fecha = new Date(t.fecha).toLocaleString('es-CO', { timeZone: 'America/Bogota' });
+    el.innerHTML = `
+      <h1>PEAJES REGIONALES</h1>
+      <div class="c">Cooperativa de Transporte<br>Estación de peaje</div><hr>
+      <div class="f"><span>Ticket</span><span>${t.consecutivo}</span></div>
+      <div class="f"><span>Fecha</span><span>${fecha}</span></div>
+      <div class="f"><span>Taquilla</span><span>${t.taquilla}</span></div>
+      <div class="f"><span>Placa</span><span>${t.placa}</span></div>
+      <div class="f"><span>Categoría</span><span>${t.categoria_codigo}</span></div>
+      <div class="c">${t.categoria_descripcion}</div>
+      <div class="f"><span>Medio</span><span>${t.medio}</span></div><hr>
+      <div class="f total"><span>TOTAL</span><span>${pesos(t.valor)}</span></div><hr>
+      <div class="c">Conserve este ticket.<br>¡Buen viaje!</div>
+      <button onclick="print()">Imprimir</button>`;
+  } catch (e) {
+    el.textContent = e.message;
+  }
+})();
+</script>
+</body>
+</html>

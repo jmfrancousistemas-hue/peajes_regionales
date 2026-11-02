@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Peajes Regionales - Portal</title>
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<header>
+  <div class="logo">P</div>
+  <h1>Peajes Regionales</h1>
+  <nav>
+    <a href="index.html">Portal</a>
+    <a href="taquillas.html">Taquillas</a>
+    <a href="tag.html">TAG y recargas</a>
+    <a href="admin.html">Administración</a>
+  </nav>
+</header>
+<main>
+  <h2>Operación del peaje</h2>
+  <div class="rejilla">
+    <div class="tarjeta servicio">
+      <span class="etiqueta">Cobro manual</span>
+      <h3 style="margin-top:8px">Taquillas 1, 2 y 3</h3>
+      <p class="sub">El operador digita la placa, elige la categoría y emite el ticket del peaje.</p>
+      <a class="boton amarillo" href="taquillas.html">Abrir taquillas</a>
+    </div>
+    <div class="tarjeta servicio">
+      <span class="etiqueta tag">Electrónico</span>
+      <h3 style="margin-top:8px">Carril TAG</h3>
+      <p class="sub">Lectura del TAG, descuento automático del saldo y semáforo de paso.</p>
+      <a class="boton amarillo" href="tag.html">Abrir carril TAG</a>
+    </div>
+    <div class="tarjeta servicio">
+      <span class="etiqueta tag">Usuarios</span>
+      <h3 style="margin-top:8px">Recargar tarjeta TAG</h3>
+      <p class="sub">Consulta de saldo, recargas y registro de nuevos vehículos.</p>
+      <a class="boton amarillo" href="tag.html#recarga">Recargar</a>
+    </div>
+  </div>
+
+  <h2 style="margin-top:28px">Servicios del servidor Linux</h2>
+  <div class="rejilla" id="servicios"></div>
+</main>
+<p class="pie">Proyecto Final Sistemas Distribuidos · Servidor Linux con Docker · INTEP</p>
+<script src="comun.js"></script>
+<script>
+const servicios = [
+  { nombre: 'Mensajería (ntfy)', puerto: 8090, req: true,
+    texto: 'Alertas en tiempo real al celular: saldo bajo, rechazos en el carril TAG, recargas y cierres de caja. Suscríbase al tema peajes-alertas.' },
+  { nombre: 'Monitor (Grafana)', puerto: 3000, req: true,
+    texto: 'Rendimiento del servidor y de cada contenedor (CPU, RAM, red) y vehículos por taquilla.' },
+  { nombre: 'Documentos (File Browser)', puerto: 8081, req: true,
+    texto: 'Reportes de cierre de caja en CSV, compartidos por web entre Windows y Linux.' },
+  { nombre: 'Prometheus', puerto: 9090,
+    texto: 'Recolector de métricas que alimenta a Grafana. Solo administradores.' },
+  { nombre: 'Base de datos (Adminer)', puerto: 8082,
+    texto: 'Administración de PostgreSQL. Solo administradores por VPN.' },
+];
+document.getElementById('servicios').innerHTML = servicios.map((s) => `
+  <div class="tarjeta servicio">
+    <span class="etiqueta ${s.req ? 'req' : ''}">${s.req ? 'Obligatorio' : 'Puerto ' + s.puerto}</span>
+    <h3 style="margin-top:8px">${s.nombre}</h3>
+    <p class="sub">${s.texto}</p>
+    <a class="boton" target="_blank" href="${urlPuerto(s.puerto)}">Abrir</a>
+  </div>`).join('');
+</script>
+</body>
+</html>

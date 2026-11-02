@@ -1,0 +1,28 @@
+{
+  "name": "Servidor Linux - Peajes Regionales",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/tailscale/codespace/tailscale": {}
+  },
+  "hostRequirements": {
+    "cpus": 2,
+    "memory": "8gb"
+  },
+  "forwardPorts": [8080, 8090, 8081, 3000, 9090, 8082],
+  "portsAttributes": {
+    "8080": { "label": "App Peajes", "onAutoForward": "notify" },
+    "8090": { "label": "Mensajeria ntfy" },
+    "8081": { "label": "Documentos File Browser" },
+    "3000": { "label": "Monitor Grafana" },
+    "9090": { "label": "Prometheus (admin)" },
+    "8082": { "label": "Adminer BD (admin)" }
+  },
+  "postStartCommand": "bash servidor_linux/scripts/iniciar.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-azuretools.vscode-docker"]
+    }
+  }
+}

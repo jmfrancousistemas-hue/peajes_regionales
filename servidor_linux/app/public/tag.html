@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Peajes Regionales - TAG y recargas</title>
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<header>
+  <div class="logo">P</div>
+  <h1>Carril TAG y recargas</h1>
+  <nav>
+    <a href="index.html">Portal</a>
+    <a href="taquillas.html">Taquillas</a>
+    <a href="tag.html">TAG y recargas</a>
+    <a href="admin.html">Administración</a>
+  </nav>
+</header>
+<main>
+  <div class="rejilla">
+    <!-- Carril TAG -->
+    <div class="tarjeta">
+      <span class="etiqueta tag">Taquilla 4</span>
+      <h3 style="margin-top:8px">Carril TAG</h3>
+      <p class="sub">Simula la antena lectora: digite el número del TAG o la placa. Pruebe con TAG-0001 o TAG-0004 (saldo bajo).</p>
+      <label>TAG o placa</label>
+      <input id="lectura" placeholder="TAG-0001" style="text-transform:uppercase">
+      <button class="verde" id="leer" style="width:100%">Leer TAG</button>
+      <div class="semaforo">
+        <div class="luz" id="luz"></div>
+        <div id="semTexto" style="font-weight:600">Esperando vehículo</div>
+      </div>
+      <div class="resultado" id="resTag"></div>
+    </div>
+
+    <!-- Recarga -->
+    <div class="tarjeta" id="recarga">
+      <span class="etiqueta tag">Usuarios</span>
+      <h3 style="margin-top:8px">Recargar tarjeta TAG</h3>
+      <div class="fila">
+        <div><label>TAG o placa</label><input id="refRec" placeholder="ABC123" style="text-transform:uppercase"></div>
+        <div style="flex:0"><button class="secundario" id="consultar">Consultar</button></div>
+      </div>
+      <div id="infoTarjeta" class="sub" style="margin-top:10px"></div>
+      <label>Valor a recargar</label>
+      <select id="valor">
+        <option value="20000">$20.000</option>
+        <option value="50000" selected>$50.000</option>
+        <option value="100000">$100.000</option>
+        <option value="200000">$200.000</option>
+      </select>
+      <label>Medio de pago</label>
+      <select id="medio">
+        <option>EFECTIVO</option><option>TARJETA</option><option>PSE</option><option>NEQUI</option>
+      </select>
+      <button class="amarillo" id="recargar" style="width:100%">Recargar</button>
+      <div class="resultado" id="resRec"></div>
+    </div>
+
+    <!-- Registro -->
+    <div class="tarjeta">
+      <span class="etiqueta">Nuevo</span>
+      <h3 style="margin-top:8px">Registrar vehículo con TAG</h3>
+      <label>Placa</label><input id="nPlaca" style="text-transform:uppercase">
+      <label>Propietario</label><input id="nProp">
+      <label>Teléfono</label><input id="nTel" inputmode="tel">
+      <label>Categoría</label><select id="nCat"></select>
+      <button id="registrar" style="width:100%">Registrar y asignar TAG</button>
+      <div class="resultado" id="resReg"></div>
+    </div>
+  </div>
+</main>
+<script src="comun.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+
+// --- Carril TAG
+async function leerTag() {
+  const luz = $('luz');
+  try {
+    const r = await api('/api/tag/paso', { method: 'POST', body: { referencia: $('lectura').value } });
+    if (r.aprobado) {
+      luz.className = 'luz verde';
+      $('semTexto').textContent = 'Paso autorizado';
+      mostrar($('resTag'), true, `${r.tarjeta.placa} · Cat. ${r.transaccion.categoria.codigo} · descontado <b>${pesos(r.transaccion.valor)}</b><br>Saldo restante: <b>${pesos(r.saldo)}</b>`);
+    } else {
+      luz.className = 'luz rojo';
+      $('semTexto').textContent = 'Paso denegado';
+      mostrar($('resTag'), false, `<b>${r.motivo}</b>${r.tarjeta ? `<br>Saldo: ${pesos(r.tarjeta.saldo)}. Diríjase a una taquilla manual o recargue.` : ''}`);
+    }
+  } catch (e) {
+    luz.className = 'luz rojo';
+    mostrar($('resTag'), false, e.message);
+  }
+  setTimeout(() => { luz.className = 'luz'; $('semTexto').textContent = 'Esperando vehículo'; }, 4000);
+}
+$('leer').onclick = leerTag;
+$('lectura').onkeydown = (e) => { if (e.key === 'Enter') leerTag(); };
+
+// --- Consulta y recarga
+async function consultar() {
+  try {
+    const t = await api('/api/tag/' + encodeURIComponent($('refRec').value.trim()));
+    const mov = t.movimientos.map((m) => `<tr><td>${m.tipo}</td><td class="num">${pesos(m.valor)}</td><td>${new Date(m.fecha).toLocaleString('es-CO')}</td></tr>`).join('');
+    $('infoTarjeta').innerHTML = `<b>${t.numero_tag}</b> · ${t.placa} · Cat. ${t.categoria_codigo}<br>${t.propietario}<br>
+      Saldo: <b style="color:var(--texto);font-size:1.1rem">${pesos(t.saldo)}</b> (alcanza para ${Math.floor(t.saldo / t.tarifa)} pasos)
+      ${mov ? `<table style="margin-top:8px">${mov}</table>` : ''}`;
+  } catch (e) {
+    $('infoTarjeta').innerHTML = `<span style="color:var(--rojo)">${e.message}</span>`;
+  }
+}
+$('consultar').onclick = consultar;
+$('recargar').onclick = async () => {
+  try {
+    const r = await api(`/api/tag/${encodeURIComponent($('refRec').value.trim())}/recarga`, {
+      method: 'POST', body: { valor: Number($('valor').value), medio_pago: $('medio').value },
+    });
+    mostrar($('resRec'), true, `Recarga exitosa de <b>${pesos(r.recarga.valor)}</b>. Nuevo saldo: <b>${pesos(r.tarjeta.saldo)}</b>`);
+    consultar();
+  } catch (e) {
+    mostrar($('resRec'), false, e.message);
+  }
+};
+
+// --- Registro
+(async () => {
+  const cats = await api('/api/categorias');
+  $('nCat').innerHTML = cats.map((c) => `<option value="${c.id}">${c.codigo} · ${c.descripcion}</option>`).join('');
+})();
+$('registrar').onclick = async () => {
+  try {
+    const t = await api('/api/tag', { method: 'POST', body: {
+      placa: $('nPlaca').value, propietario: $('nProp').value, telefono: $('nTel').value, categoria_id: Number($('nCat').value),
+    } });
+    mostrar($('resReg'), true, `TAG <b>${t.numero_tag}</b> asignado a ${t.placa}. Saldo inicial $0: haga la primera recarga.`);
+    $('refRec').value = t.numero_tag;
+    consultar();
+  } catch (e) {
+    mostrar($('resReg'), false, e.message);
+  }
+};
+</script>
+</body>
+</html>

@@ -1,5 +1,7 @@
 # Simulador Híbrido de Tráfico y Peajes Regionales
 
+> **Proyecto Final de Sistemas Distribuidos: servidor Linux con Docker.** La carpeta [`servidor_linux/`](servidor_linux/README.md) tiene el sistema web de peajes (3 taquillas manuales, carril TAG y recargas) con mensajería, monitor de rendimiento, documentos compartidos y VPN. Se abre en GitHub Codespaces: **Code → Codespaces → Create codespace on main**.
+
 Proyecto Final de Modelos de Simulación (UNINTEP), Alternativa 1. MATLAB R2021a o posterior; Simulink para el modelo de aproximación.
 
 ## Cómo correrlo

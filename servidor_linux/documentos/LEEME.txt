@@ -1,0 +1,7 @@
+Carpeta compartida de documentos del peaje.
+
+Todo lo que se suba aquí desde File Browser (por ejemplo manuales de operación,
+resoluciones de tarifas o formatos de la cooperativa) queda disponible por web
+tanto desde Windows como desde Linux.
+
+Los cierres de caja que genera la aplicación aparecen en la carpeta "reportes".
