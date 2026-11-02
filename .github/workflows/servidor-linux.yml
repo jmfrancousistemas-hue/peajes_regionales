@@ -32,9 +32,9 @@ jobs:
       - name: Pruebas de humo
         run: bash scripts/probar.sh
 
-      - name: Estado de los contenedores
+      - name: Estado de los 10 servicios
         if: always()
-        run: docker compose ps
+        run: bash scripts/estado.sh
 
       - name: Registros si algo falla
         if: failure()
