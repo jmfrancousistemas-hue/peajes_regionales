@@ -1,6 +1,6 @@
 # Servidor Linux con Docker para Peajes
 
-Proyecto Final de **Sistemas Distribuidos** (UNINTEP). Es un servidor Linux con Docker para la cooperativa de transporte, alojado en GitHub Codespaces. Corre 10 contenedores:
+Proyecto Final de **Sistemas Distribuidos** (UNINTEP). Es un servidor Linux con Docker para Peajes, alojado en GitHub Codespaces. Corre 10 contenedores:
 
 > El simulador de MATLAB que está en la raíz del repositorio es otro proyecto, de la asignatura Modelos de Simulación.
 
@@ -8,7 +8,7 @@ Proyecto Final de **Sistemas Distribuidos** (UNINTEP). Es un servidor Linux con 
 |---|---|---|---|---|
 | 1 | App de peajes | `peajes-app` (Debian 12 + Node 20) | interno 3000 | 3 taquillas manuales, carril TAG, recargas, administración |
 | 2 | Proxy web | `peajes-nginx` | **8080** | Puerta de entrada pública a la app |
-| 3 | Base de datos | `peajes-db` (PostgreSQL 16) | interno | Tarifas, TAG, saldos, transacciones, recargas |
+| 3 | Base de datos | `peajes-db` (PostgreSQL) | interno | Tarifas, TAG, saldos, transacciones, recargas |
 | 4 | **Mensajería** | `peajes-ntfy` | **8090** | Alertas al celular: saldo bajo, rechazos TAG, recargas, cierres |
 | 5 | **Monitor** | `peajes-grafana` | **3000** | Tablero con el rendimiento del servidor, los contenedores y el peaje |
 | 6 | Recolector de métricas | `peajes-prometheus` | 9090 | Guarda las métricas que muestra Grafana |
