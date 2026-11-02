@@ -1,0 +1,45 @@
+# Pipeline de GitHub Actions: levanta el servidor completo con Docker
+# en una máquina Ubuntu de GitHub y corre las pruebas de todos los servicios.
+name: Servidor Linux - Peajes
+
+on:
+  push:
+    paths:
+      - "servidor_linux/**"
+      - ".github/workflows/servidor-linux.yml"
+  workflow_dispatch:
+
+jobs:
+  probar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: servidor_linux
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Información del sistema Linux
+        run: |
+          cat /etc/os-release
+          uname -a
+          docker version
+          docker compose version
+
+      - name: Levantar los servicios
+        run: bash scripts/iniciar.sh
+
+      - name: Pruebas de humo
+        run: bash scripts/probar.sh
+
+      - name: Estado de los contenedores
+        if: always()
+        run: docker compose ps
+
+      - name: Registros si algo falla
+        if: failure()
+        run: docker compose logs --tail=80
+
+      - name: Apagar
+        if: always()
+        run: docker compose down -v

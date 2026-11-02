@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Peajes Regionales - Taquillas manuales</title>
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<header>
+  <div class="logo">P</div>
+  <h1>Taquillas manuales</h1>
+  <nav>
+    <a href="index.html">Portal</a>
+    <a href="taquillas.html">Taquillas</a>
+    <a href="tag.html">TAG y recargas</a>
+    <a href="admin.html">Administración</a>
+  </nav>
+</header>
+<main>
+  <div class="rejilla" id="taquillas"></div>
+</main>
+<script src="comun.js"></script>
+<script>
+let categorias = [];
+
+function tarjetaTaquilla(n) {
+  return `
+  <div class="tarjeta" id="taq${n}">
+    <span class="etiqueta">Efectivo</span>
+    <h3 style="margin-top:8px">Taquilla ${n}</h3>
+    <label>Placa</label>
+    <input class="placa" maxlength="7" placeholder="ABC123" autocomplete="off" style="text-transform:uppercase">
+    <label>Categoría</label>
+    <div class="cats">
+      ${categorias.map((c) => `<button type="button" data-id="${c.id}">${c.codigo}<small>${pesos(c.tarifa)}</small></button>`).join('')}
+    </div>
+    <button class="amarillo cobrar" style="width:100%">Cobrar y emitir ticket</button>
+    <div class="resultado"></div>
+  </div>`;
+}
+
+function conectar(n) {
+  const raiz = document.getElementById('taq' + n);
+  let categoria = null;
+  raiz.querySelectorAll('.cats button').forEach((b) => b.onclick = () => {
+    raiz.querySelectorAll('.cats button').forEach((x) => x.classList.remove('sel'));
+    b.classList.add('sel');
+    categoria = Number(b.dataset.id);
+  });
+  const placa = raiz.querySelector('.placa');
+  const salida = raiz.querySelector('.resultado');
+  const boton = raiz.querySelector('.cobrar');
+  const cobrar = async () => {
+    if (!categoria) return mostrar(salida, false, 'Seleccione la categoría del vehículo.');
+    boton.disabled = true;
+    try {
+      const t = await api(`/api/taquillas/${n}/cobro`, { method: 'POST', body: { placa: placa.value, categoria_id: categoria } });
+      mostrar(salida, true, `<b>${t.consecutivo}</b><br>${t.placa} · Cat. ${t.categoria.codigo} · <b>${pesos(t.valor)}</b><br>
+        <a href="ticket.html?c=${encodeURIComponent(t.consecutivo)}" target="_blank">Imprimir ticket</a>`);
+      placa.value = '';
+      placa.focus();
+    } catch (e) {
+      mostrar(salida, false, e.message);
+    } finally {
+      boton.disabled = false;
+    }
+  };
+  boton.onclick = cobrar;
+  placa.onkeydown = (e) => { if (e.key === 'Enter') cobrar(); };
+}
+
+(async () => {
+  categorias = await api('/api/categorias');
+  document.getElementById('taquillas').innerHTML = [1, 2, 3].map(tarjetaTaquilla).join('');
+  [1, 2, 3].forEach(conectar);
+})();
+</script>
+</body>
+</html>
