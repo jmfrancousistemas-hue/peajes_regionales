@@ -1,5 +1,5 @@
-# Servidor Linux con Docker - Sistema de Peajes Regionales
-# Proyecto Final de Sistemas Distribuidos (INTEP)
+# Servidor Linux con Docker para Peajes
+# Proyecto Final de Sistemas Distribuidos (UNINTEP)
 #
 #   Puerto | Servicio                       | Acceso
 #   8080   | App de peajes (Nginx + Node)   | Público (enlace por WhatsApp)

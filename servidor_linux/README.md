@@ -1,6 +1,8 @@
-# Servidor Linux con Docker: Sistema de Peajes Regionales
+# Servidor Linux con Docker para Peajes
 
-Proyecto Final de Sistemas Distribuidos (INTEP). Es un servidor Linux con Docker para la cooperativa de transporte, alojado en GitHub Codespaces. Corre 10 contenedores:
+Proyecto Final de **Sistemas Distribuidos** (UNINTEP). Es un servidor Linux con Docker para la cooperativa de transporte, alojado en GitHub Codespaces. Corre 10 contenedores:
+
+> El simulador de MATLAB que está en la raíz del repositorio es otro proyecto, de la asignatura Modelos de Simulación.
 
 | # | Servicio | Contenedor | Puerto | Para qué sirve |
 |---|---|---|---|---|
@@ -88,7 +90,7 @@ Prometheus y Adminer quedan con visibilidad **Private** en Codespaces, así que 
 
 ## 5. Guion para la presentación (unos 10 minutos)
 
-1. **Infraestructura.** En la terminal ejecute `cat /etc/os-release` y `docker compose -f servidor_linux/docker-compose.yml ps`: se ven los 10 contenedores *Up*.
+1. **Infraestructura.** En la terminal ejecute `cat /etc/os-release` y `bash servidor_linux/scripts/estado.sh`: muestra la tabla de los 10 servicios y al final *Servicios arriba: 10 de 10*.
 2. **Enlace por WhatsApp.** Envíe al grupo el enlace del puerto 8080. Los compañeros abren la app desde el celular.
 3. **Taquilla manual.** En *Taquillas*, placa `KLM321`, Cat. I → *Cobrar*. Abra *Imprimir ticket*.
 4. **Carril TAG.** Lea `TAG-0001`: semáforo verde y descuento. Luego lea `TAG-0004`: semáforo rojo por saldo insuficiente. **Al celular llega la alerta de ntfy.**
@@ -108,6 +110,7 @@ bash servidor_linux/scripts/probar.sh
 
 ```bash
 cd servidor_linux
+bash scripts/estado.sh             # tabla de los 10 servicios (levanta los caídos)
 docker compose ps                  # estado de los servicios
 docker compose logs -f app         # registros de la app
 docker stats                       # consumo en vivo de cada contenedor
@@ -138,5 +141,6 @@ servidor_linux/
   monitoreo/                       Prometheus y Grafana (tablero ya configurado)
   reportes/                        Cierres de caja (compartidos por File Browser)
   documentos/                      Carpeta compartida para documentos
-  scripts/iniciar.sh, probar.sh    Arranque y pruebas
+  scripts/iniciar.sh, probar.sh,   Arranque, pruebas y
+          estado.sh                estado de los 10 servicios
 ```
